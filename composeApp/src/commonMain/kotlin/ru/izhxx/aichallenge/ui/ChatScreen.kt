@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
+import ru.izhxx.aichallenge.AppDimens
 import ru.izhxx.aichallenge.domain.model.Message
 import ru.izhxx.aichallenge.viewmodel.ChatViewModel
 
@@ -48,7 +49,7 @@ fun ChatScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lazyListState = rememberLazyListState()
-    
+
     // Автоматическая прокрутка к последнему сообщению
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -75,10 +76,11 @@ fun ChatScreen(
                     }
                 }
             )
-            
+
             // Список сообщений
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth()
+                    .padding(horizontal = AppDimens.baseContentPadding),
                 state = lazyListState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
@@ -86,14 +88,14 @@ fun ChatScreen(
                 items(state.messages) { message ->
                     MessageItem(message = message)
                 }
-                
+
                 if (state.isLoading) {
                     item {
                         LoadingIndicator()
                     }
                 }
             }
-            
+
             // Поле ввода и кнопка отправки
             MessageInput(
                 value = state.inputText,
@@ -101,9 +103,10 @@ fun ChatScreen(
                 onSendClick = { viewModel.sendMessage(state.inputText) },
                 isLoading = state.isLoading,
                 modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = AppDimens.baseContentPadding)
             )
         }
-        
+
         // Отображение ошибок
         state.error?.let { error ->
             Snackbar(
@@ -127,13 +130,13 @@ fun MessageItem(message: Message) {
     } else {
         MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
     }
-    
+
     val alignment = if (message.isFromUser) {
         Alignment.CenterEnd
     } else {
         Alignment.CenterStart
     }
-    
+
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = alignment
@@ -182,9 +185,9 @@ fun MessageInput(
             placeholder = { Text("Введите вопрос...") },
             enabled = !isLoading
         )
-        
+
         Spacer(Modifier.width(8.dp))
-        
+
         Button(
             onClick = onSendClick,
             enabled = value.isNotBlank() && !isLoading

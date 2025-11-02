@@ -40,6 +40,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
+import ru.izhxx.aichallenge.AppDimens
 import ru.izhxx.aichallenge.viewmodel.SettingsViewModel
 
 /**
@@ -87,7 +88,7 @@ fun SettingsScreen(
             )
             
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = AppDimens.baseContentPadding)
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
