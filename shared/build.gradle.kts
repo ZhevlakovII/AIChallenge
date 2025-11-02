@@ -31,6 +31,7 @@ kotlin {
             // Ktor Client
             implementation(libs.ktor.clientCore)
             implementation(libs.ktor.clientContentNegotiation)
+            implementation(libs.ktor.clientLogging)
             implementation(libs.ktor.serializationKotlinxJson)
 
             // Kotlinx Serialization

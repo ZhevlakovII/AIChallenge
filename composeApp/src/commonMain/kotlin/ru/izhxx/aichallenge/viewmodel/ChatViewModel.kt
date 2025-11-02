@@ -7,13 +7,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ru.izhxx.aichallenge.data.preferences.ApiKeyStore
+import ru.izhxx.aichallenge.data.api.OpenAIClient
 import ru.izhxx.aichallenge.domain.model.Message
 import java.util.UUID
 
-class ChatViewModel(private val apiKeyStore: ApiKeyStore) : ViewModel() {
-    // OpenAIClient с использованием ApiKeyStore внедряется с помощью Koin
-    private val openAIClient = org.koin.core.context.GlobalContext.get().get<ru.izhxx.aichallenge.data.api.OpenAIClient>()
+class ChatViewModel(private val openAIClient: OpenAIClient) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state.asStateFlow()

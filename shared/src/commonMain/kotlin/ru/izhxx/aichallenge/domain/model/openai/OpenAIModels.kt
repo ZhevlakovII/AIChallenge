@@ -5,29 +5,29 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ChatCompletionRequest(
-    val model: String = "gpt-3.5-turbo",
-    val messages: List<ChatMessage>,
-    val temperature: Double = 0.7
+    @SerialName("model") val model: String,
+    @SerialName("messages") val messages: List<ChatMessage>,
+    @SerialName("temperature") val temperature: Double
 )
 
 @Serializable
 data class ChatCompletionResponse(
-    val id: String,
-    val choices: List<Choice>,
-    val created: Long,
-    val model: String,
+    @SerialName("id") val id: String,
+    @SerialName("choices") val choices: List<Choice>,
+    @SerialName("created") val created: Long,
+    @SerialName("model") val model: String,
     @SerialName("object") val objectName: String
 )
 
 @Serializable
 data class ChatMessage(
-    val role: String,
-    val content: String
+    @SerialName("role") val role: String,
+    @SerialName("content") val content: String
 )
 
 @Serializable
 data class Choice(
-    val index: Int,
-    val message: ChatMessage,
+    @SerialName("index") val index: Int,
+    @SerialName("message") val message: ChatMessage,
     @SerialName("finish_reason") val finishReason: String
 )

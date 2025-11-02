@@ -78,10 +78,10 @@ fun ChatScreen(
             
             // Список сообщений
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 state = lazyListState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(state.messages) { message ->
                     MessageItem(message = message)
@@ -100,14 +100,14 @@ fun ChatScreen(
                 onValueChange = { viewModel.updateInputText(it) },
                 onSendClick = { viewModel.sendMessage(state.inputText) },
                 isLoading = state.isLoading,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+                modifier = Modifier.fillMaxWidth()
             )
         }
         
         // Отображение ошибок
         state.error?.let { error ->
             Snackbar(
-                modifier = Modifier.padding(16.dp).align(Alignment.BottomCenter),
+                modifier = Modifier.align(Alignment.BottomCenter),
                 action = {
                     TextButton(onClick = { viewModel.clearError() }) {
                         Text("ОК")
@@ -153,7 +153,7 @@ fun MessageItem(message: Message) {
 @Composable
 fun LoadingIndicator() {
     Box(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator(

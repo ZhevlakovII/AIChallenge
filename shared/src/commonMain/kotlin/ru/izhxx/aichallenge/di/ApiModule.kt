@@ -7,8 +7,8 @@ import ru.izhxx.aichallenge.data.api.OpenAIClient
  * Koin модуль для API-клиентов
  */
 val apiModule = module {
-    // OpenAIClient - клиент для работы с OpenAI API
+    // OpenAIClient - клиент для работы с LLM API
     single { 
-        OpenAIClient(apiKeyStore = get())
+        OpenAIClient(llmSettingsStore = get())
     }
 }
