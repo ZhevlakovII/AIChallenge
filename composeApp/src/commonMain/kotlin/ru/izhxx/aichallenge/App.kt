@@ -1,47 +1,73 @@
 package ru.izhxx.aichallenge
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import ru.izhxx.aichallenge.ui.ChatScreen
+import ru.izhxx.aichallenge.ui.SettingsScreen
 
-import aichallenge.composeapp.generated.resources.Res
-import aichallenge.composeapp.generated.resources.compose_multiplatform
+/**
+ * Главные экраны приложения
+ */
+sealed class Screen(val route: String) {
+    object Chat : Screen("chat")
+    object Settings : Screen("settings")
+}
+
+/**
+ * Константы для отступов в UI
+ */
+object AppDimens {
+    val baseContentPadding = 16.dp
+}
 
 @Composable
-@Preview
 fun App() {
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
+        val navController = rememberNavController()
+
+        // Получаем системные отступы
+        val navigationBarInsets = WindowInsets.navigationBars
+
+        // Оборачиваем все в Box с общими отступами, учитывающими системные инсеты
+        Box(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                // Применяем отступы со всех сторон с учетом системных инсетов
+                .padding(
+                    // Низ: учитываем навигационную панель плюс базовый отступ
+                    bottom = navigationBarInsets.asPaddingValues().calculateBottomPadding() + AppDimens.baseContentPadding,
+                )
         ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+            NavHost(navController = navController, startDestination = Screen.Chat.route) {
+                // Экран чата
+                composable(Screen.Chat.route) {
+                    ChatScreen(
+                        onNavigateToSettings = {
+                            navController.navigate(Screen.Settings.route)
+                        }
+                    )
+                }
+
+                // Экран настроек
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
             }
         }
