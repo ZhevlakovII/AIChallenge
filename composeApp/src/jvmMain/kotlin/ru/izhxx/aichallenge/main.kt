@@ -11,12 +11,13 @@ fun main() {
         // Загружаем модули: appModule из composeApp и модули из shared
         modules(appModule)
     }
-    
+
     application {
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "AIChallenge",
-    ) {
-        App()
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "AIChallenge",
+        ) {
+            App()
+        }
     }
-}}
+}
