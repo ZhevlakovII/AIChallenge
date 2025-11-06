@@ -7,16 +7,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ru.izhxx.aichallenge.data.api.OpenAIClient
-import ru.izhxx.aichallenge.data.preferences.LLMSettingsStore
-import ru.izhxx.aichallenge.domain.model.LLMUserSettings
+import ru.izhxx.aichallenge.domain.model.ResponseFormat
+import ru.izhxx.aichallenge.domain.model.llmsettings.LLMPromptSettings
+import ru.izhxx.aichallenge.domain.model.llmsettings.LLMProviderSettings
+import ru.izhxx.aichallenge.domain.repository.LLMPromptSettingsRepository
+import ru.izhxx.aichallenge.domain.repository.LLMProviderSettingsRepository
 
 /**
  * ViewModel для экрана настроек
  */
 class SettingsViewModel(
-    private val llmSettingsStore: LLMSettingsStore,
-    private val openAIClient: OpenAIClient
+    private val providerSettingsStore: LLMProviderSettingsRepository,
+    private val promptSettingsStore: LLMPromptSettingsRepository,
 ) : ViewModel() {
     
     private val _state = MutableStateFlow(SettingsState())
@@ -27,19 +29,23 @@ class SettingsViewModel(
     }
     
     /**
-     * Загружает настройки LLM из хранилища
+     * Загружает настройки LLM из хранилищ
      */
     private fun loadSettings() {
         viewModelScope.launch {
             try {
-                val settings = llmSettingsStore.getSettings()
+                val providerSettings = providerSettingsStore.getSettings()
+                val promptSettings = promptSettingsStore.getSettings()
+                
                 _state.update { 
                     it.copy(
-                        apiKey = settings.apiKey,
-                        apiUrl = settings.apiUrl,
-                        model = settings.model,
-                        temperature = settings.temperature.toString(),
-                        openaiProject = settings.openaiProject,
+                        apiKey = providerSettings.apiKey,
+                        apiUrl = providerSettings.apiUrl,
+                        model = providerSettings.model,
+                        openaiProject = providerSettings.openaiProject,
+                        temperature = promptSettings.temperature.toString(),
+                        responseFormat = promptSettings.responseFormat,
+                        systemPrompt = promptSettings.systemPrompt,
                         isLoading = false
                     )
                 }
@@ -90,7 +96,21 @@ class SettingsViewModel(
     }
     
     /**
-     * Сохраняет все настройки LLM в хранилище
+     * Обновляет значение формата ответа в state
+     */
+    fun updateResponseFormat(format: ResponseFormat) {
+        _state.update { it.copy(responseFormat = format) }
+    }
+    
+    /**
+     * Обновляет значение системного промпта в state
+     */
+    fun updateSystemPrompt(prompt: String) {
+        _state.update { it.copy(systemPrompt = prompt) }
+    }
+    
+    /**
+     * Сохраняет все настройки LLM в хранилища
      */
     fun saveSettings() {
         val currentState = state.value
@@ -133,19 +153,33 @@ class SettingsViewModel(
             return
         }
         
+        // Проверяем системный промпт
+        if (currentState.systemPrompt.isBlank()) {
+            _state.update { 
+                it.copy(error = "Системный промпт не может быть пустым")
+            }
+            return
+        }
+        
         _state.update { it.copy(isLoading = true, isSaved = false, error = null) }
         
-        val settings = LLMUserSettings(
+        val providerSettings = LLMProviderSettings(
             apiKey = currentState.apiKey.trim(),
             apiUrl = currentState.apiUrl.trim(),
             model = currentState.model.trim(),
-            temperature = temperatureValue,
             openaiProject = currentState.openaiProject.trim()
+        )
+        
+        val promptSettings = LLMPromptSettings(
+            temperature = temperatureValue,
+            responseFormat = currentState.responseFormat,
+            systemPrompt = currentState.systemPrompt.trim()
         )
         
         viewModelScope.launch {
             try {
-                llmSettingsStore.saveSettings(settings)
+                providerSettingsStore.saveSettings(providerSettings)
+                promptSettingsStore.saveSettings(promptSettings)
                 _state.update { 
                     it.copy(isLoading = false, isSaved = true)
                 }
@@ -161,48 +195,21 @@ class SettingsViewModel(
     }
     
     /**
-     * Сохраняет только API ключ в хранилище
-     */
-    fun saveApiKey() {
-        val apiKey = state.value.apiKey.trim()
-        if (apiKey.isBlank()) {
-            _state.update { 
-                it.copy(error = "API ключ не может быть пустым")
-            }
-            return
-        }
-        
-        _state.update { it.copy(isLoading = true, isSaved = false, error = null) }
-        
-        viewModelScope.launch {
-            try {
-                llmSettingsStore.saveApiKey(apiKey)
-                _state.update { 
-                    it.copy(isLoading = false, isSaved = true)
-                }
-            } catch (e: Exception) {
-                _state.update { 
-                    it.copy(
-                        error = "Не удалось сохранить API ключ: ${e.message}",
-                        isLoading = false
-                    )
-                }
-            }
-        }
-    }
-    
-    /**
      * Восстанавливает настройки по умолчанию
      */
     fun restoreDefaults() {
-        val defaultSettings = LLMUserSettings()
+        val defaultProviderSettings = LLMProviderSettings()
+        val defaultPromptSettings = LLMPromptSettings()
+        
         _state.update { 
             it.copy(
                 apiKey = it.apiKey, // Сохраняем текущий API ключ
-                apiUrl = defaultSettings.apiUrl,
-                model = defaultSettings.model,
-                temperature = defaultSettings.temperature.toString(),
-                openaiProject = defaultSettings.openaiProject,
+                apiUrl = defaultProviderSettings.apiUrl,
+                model = defaultProviderSettings.model,
+                openaiProject = defaultProviderSettings.openaiProject,
+                temperature = defaultPromptSettings.temperature.toString(),
+                responseFormat = defaultPromptSettings.responseFormat,
+                systemPrompt = defaultPromptSettings.systemPrompt,
                 error = null
             )
         }
@@ -227,11 +234,18 @@ class SettingsViewModel(
  * Состояние для экрана настроек
  */
 data class SettingsState(
+    // Настройки провайдера
     val apiKey: String = "",
     val apiUrl: String = "",
     val model: String = "",
-    val temperature: String = "",
     val openaiProject: String = "",
+    
+    // Настройки промпта
+    val temperature: String = "0.7",
+    val responseFormat: ResponseFormat = ResponseFormat.XML,
+    val systemPrompt: String = "",
+    
+    // Состояние UI
     val isLoading: Boolean = true,
     val isSaved: Boolean = false,
     val error: String? = null

@@ -11,5 +11,5 @@ val appModule = module {
     
     // Включаем модули из shared
     // apiModule и dataModule будут доступны через Koin
-    includes(dataModule, apiModule)
+    includes(sharedModule)
 }

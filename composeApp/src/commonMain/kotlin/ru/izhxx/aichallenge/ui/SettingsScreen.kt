@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import ru.izhxx.aichallenge.AppDimens
+import ru.izhxx.aichallenge.domain.model.ResponseFormat
 import ru.izhxx.aichallenge.viewmodel.SettingsViewModel
 
 /**
@@ -97,6 +99,13 @@ fun SettingsScreen(
                     text = "Настройте параметры для работы с LLM API:",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                )
+                
+                // ============ СЕКЦИЯ НАСТРОЕК ПРОВАЙДЕРА ============
+                Text(
+                    text = "Настройки провайдера LLM",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)
                 )
                 
                 // Секция API ключа
@@ -191,6 +200,40 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Секция Project ID
+                Text(
+                    text = "OpenAI Project ID",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "Идентификатор проекта (опционально):",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                OutlinedTextField(
+                    value = state.openaiProject,
+                    onValueChange = { viewModel.updateOpenaiProject(it) },
+                    label = { Text("Project ID") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // ============ СЕКЦИЯ НАСТРОЕК ВЗАИМОДЕЙСТВИЯ С LLM ============
+                Text(
+                    text = "Настройки взаимодействия с LLM",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)
+                )
+                
                 // Секция температуры
                 Text(
                     text = "Температура",
@@ -219,32 +262,71 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Секция Project ID
+                // Секция формата ответа
                 Text(
-                    text = "OpenAI Project ID",
+                    text = "Формат ответа",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 
                 Text(
-                    text = "Идентификатор проекта (опционально):",
+                    text = "Выберите, в каком формате LLM должен возвращать ответы:",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                // Радиокнопки для выбора формата
+                ResponseFormat.entries.forEach { format ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (format == state.responseFormat),
+                            onClick = { viewModel.updateResponseFormat(format) },
+                            enabled = !state.isLoading
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = when (format) {
+                                ResponseFormat.XML -> "XML формат"
+                                ResponseFormat.JSON -> "JSON формат"
+                                ResponseFormat.UNFORMATTED -> "Без особого форматирования"
+                            },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Секция системного промпта
+                Text(
+                    text = "Системный промпт",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "Определяет роль и поведение LLM агента:",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 
                 OutlinedTextField(
-                    value = state.openaiProject,
-                    onValueChange = { viewModel.updateOpenaiProject(it) },
-                    label = { Text("Project ID") },
-                    modifier = Modifier.fillMaxWidth(),
+                    value = state.systemPrompt,
+                    onValueChange = { viewModel.updateSystemPrompt(it) },
+                    label = { Text("Системный промпт") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
                     enabled = !state.isLoading,
-                    singleLine = true,
                     keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done
+                        imeAction = ImeAction.Default
                     ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { viewModel.saveSettings() }
-                    )
+                    maxLines = 5
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))

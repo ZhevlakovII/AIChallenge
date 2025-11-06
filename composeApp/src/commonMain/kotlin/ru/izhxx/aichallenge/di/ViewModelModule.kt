@@ -11,14 +11,17 @@ import ru.izhxx.aichallenge.viewmodel.SettingsViewModel
 val viewModelModule = module {
     // ChatViewModel - для экрана чата
     viewModel { 
-        ChatViewModel(openAIClient = get())
+        ChatViewModel(
+            llmClientRepository = get(),
+            llmProviderSettingsRepositoryImpl = get(),
+        )
     }
     
     // SettingsViewModel - для экрана настроек
     viewModel {
         SettingsViewModel(
-            llmSettingsStore = get(),
-            openAIClient = get()
+            providerSettingsStore = get(),
+            promptSettingsStore = get(),
         ) 
     }
 }
