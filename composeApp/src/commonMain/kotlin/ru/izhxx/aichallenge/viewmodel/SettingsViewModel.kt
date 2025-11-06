@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ru.izhxx.aichallenge.domain.model.MessageType
 import ru.izhxx.aichallenge.domain.model.ResponseFormat
 import ru.izhxx.aichallenge.domain.model.llmsettings.LLMPromptSettings
 import ru.izhxx.aichallenge.domain.model.llmsettings.LLMProviderSettings
