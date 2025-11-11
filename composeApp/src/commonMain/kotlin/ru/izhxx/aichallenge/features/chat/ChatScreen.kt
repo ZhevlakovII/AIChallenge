@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -151,10 +152,12 @@ fun MessageItem(message: Message) {
             Card(
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    text = message.text,
-                    modifier = Modifier.background(backgroundColor).padding(12.dp)
-                )
+                SelectionContainer {
+                    Text(
+                        text = message.text,
+                        modifier = Modifier.background(backgroundColor).padding(12.dp)
+                    )
+                }
             }
 
             // Отображаем метрики для ответов ассистента
@@ -163,7 +166,7 @@ fun MessageItem(message: Message) {
                 val timeSeconds = String.format("%.2f", metrics?.responseTime?.div(1000.0))
                 
                 Text(
-                    text = "⏱️ ${timeSeconds}s | 🔤 ${metrics?.tokensInput} + ${metrics?.tokensOutput} = ${metrics?.tokensTotal}",
+                    text = "⏱️ ${timeSeconds}с | 🔤 Входные: ${metrics?.tokensInput} | Выходные: ${metrics?.tokensOutput} | Всего: ${metrics?.tokensTotal}",
                     modifier = Modifier.padding(top = 4.dp).padding(horizontal = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
