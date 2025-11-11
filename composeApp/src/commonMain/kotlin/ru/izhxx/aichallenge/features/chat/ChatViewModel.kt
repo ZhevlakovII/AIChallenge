@@ -1,4 +1,4 @@
-package ru.izhxx.aichallenge.viewmodel
+package ru.izhxx.aichallenge.features.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -158,12 +158,13 @@ class ChatViewModel(
                             // Получаем отображаемый текст из парсённого ответа
                             val displayText = ResponseParser.getDisplayText(parsedResponse)
 
-                            // Добавляем ответ от агента с информацией о формате
+                            // Добавляем ответ от агента с информацией о формате и метриках
                             val assistantMessage = Message(
                                 id = UUID.randomUUID().toString(),
                                 text = displayText,
                                 type = MessageType.ASSISTANT,
-                                responseFormat = parsedResponse.format
+                                responseFormat = parsedResponse.format,
+                                metrics = parsedResponse.metrics
                             )
                             addMessage(assistantMessage)
 

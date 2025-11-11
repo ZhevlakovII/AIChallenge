@@ -5,6 +5,7 @@ import ru.izhxx.aichallenge.data.api.OpenAIApi
 import ru.izhxx.aichallenge.data.parser.ResponseParser
 import ru.izhxx.aichallenge.domain.model.FormatSystemPrompts
 import ru.izhxx.aichallenge.domain.model.ParsedResponse
+import ru.izhxx.aichallenge.domain.model.RequestMetrics
 import ru.izhxx.aichallenge.domain.model.openai.ChatMessage
 import ru.izhxx.aichallenge.domain.model.openai.LLMChatRequest
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
@@ -82,8 +83,14 @@ class LLMClientRepositoryImpl(
         )
 
         try {
+            // Замеряем время начала запроса
+            val startTime = System.currentTimeMillis()
+            
             // Отправляем запрос к API
             val completionResponse = openAIApi.sendRequest(request)
+
+            // Вычисляем время выполнения запроса
+            val responseTime = System.currentTimeMillis() - startTime
 
             // Получаем содержимое сообщения
             val messageContent = completionResponse.choices.firstOrNull()?.message?.content
@@ -95,8 +102,23 @@ class LLMClientRepositoryImpl(
 
             logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
 
+            // Создаём объект метрик из ответа API
+            val metrics = completionResponse.usage?.let {
+                RequestMetrics(
+                    responseTime = responseTime,
+                    tokensInput = it.promptTokens,
+                    tokensOutput = it.completionTokens,
+                    tokensTotal = it.totalTokens
+                )
+            }
+
             // Парсим ответ в соответствии с выбранным форматом
-            return ResponseParser.parseResponse(messageContent, promptSettings.responseFormat)
+            val parsedResult = ResponseParser.parseResponse(messageContent, promptSettings.responseFormat)
+            
+            // Добавляем метрики к результату
+            return parsedResult.map { parsed ->
+                parsed.copy(metrics = metrics)
+            }
         } catch (e: Exception) {
             // Если произошла ошибка при выполнении запроса или парсинге ответа
             logger.e("Ошибка при выполнении запроса или парсинге ответа", e)

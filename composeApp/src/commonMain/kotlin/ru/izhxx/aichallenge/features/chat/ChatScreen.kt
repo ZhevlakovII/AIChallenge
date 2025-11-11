@@ -1,4 +1,4 @@
-package ru.izhxx.aichallenge.ui
+package ru.izhxx.aichallenge.features.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +39,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import ru.izhxx.aichallenge.AppDimens
 import ru.izhxx.aichallenge.domain.model.Message
-import ru.izhxx.aichallenge.viewmodel.ChatViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,14 +145,30 @@ fun MessageItem(message: Message) {
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = alignment
     ) {
-        Card(
-            modifier = Modifier.padding(vertical = 4.dp).widthIn(max = 300.dp),
-            shape = RoundedCornerShape(12.dp)
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp).widthIn(max = 300.dp)
         ) {
-            Text(
-                text = message.text,
-                modifier = Modifier.background(backgroundColor).padding(12.dp)
-            )
+            Card(
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = message.text,
+                    modifier = Modifier.background(backgroundColor).padding(12.dp)
+                )
+            }
+
+            // Отображаем метрики для ответов ассистента
+            if (!message.isFromUser && message.metrics != null) {
+                val metrics = message.metrics
+                val timeSeconds = String.format("%.2f", metrics?.responseTime?.div(1000.0))
+                
+                Text(
+                    text = "⏱️ ${timeSeconds}s | 🔤 ${metrics?.tokensInput} + ${metrics?.tokensOutput} = ${metrics?.tokensTotal}",
+                    modifier = Modifier.padding(top = 4.dp).padding(horizontal = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

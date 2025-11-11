@@ -13,4 +13,5 @@ data class ParsedResponse(
     val format: ResponseFormat,
     val isValid: Boolean = true,
     val validationError: String? = null,
+    val metrics: RequestMetrics? = null,
 )

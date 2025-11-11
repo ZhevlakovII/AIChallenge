@@ -16,6 +16,7 @@ import kotlinx.serialization.json.Json
 import ru.izhxx.aichallenge.common.Logger
 import ru.izhxx.aichallenge.domain.model.openai.LLMChatRequest
 import ru.izhxx.aichallenge.domain.model.openai.LLMChatResponse
+import ru.izhxx.aichallenge.domain.model.openai.Usage
 import io.ktor.client.plugins.logging.Logger as KtorLogger
 
 /**
@@ -52,13 +53,13 @@ internal class OpenAIApiImpl(private val json: Json) : OpenAIApi {
      */
     override suspend fun sendRequest(request: LLMChatRequest): LLMChatResponse {
         // Проверяем наличие API ключа
-        if (request.apiKey.isBlank()) {
+        if (request.apiKey.isEmpty()) {
             logger.w("API ключ не настроен")
             throw Exception("API ключ LLM не настроен. Пожалуйста, настройте его в настройках.")
         }
-        
+
         // Проверяем URL API
-        if (request.apiUrl.isBlank()) {
+        if (request.apiUrl.isEmpty()) {
             logger.w("URL API не настроен")
             throw Exception("URL API не настроен. Пожалуйста, настройте его в настройках.")
         }
@@ -67,28 +68,33 @@ internal class OpenAIApiImpl(private val json: Json) : OpenAIApi {
         logger.d("Request Body: $request")
         logger.d("Запрос к API: model=${request.model}, messagesCount=${request.messages.size}")
         logger.i("Отправка запроса к API")
-        
+
         try {
-            
+            // Замеряем время начала запроса
+            val startTime = System.currentTimeMillis()
+
             // Выполняем запрос к API
             val response = httpClient.post(request.apiUrl) {
                 contentType(ContentType.Application.Json)
                 header("Authorization", "Bearer ${request.apiKey}")
-                if (request.openAIProject.isNotBlank()) {
+                if (request.openAIProject.isNotEmpty()) {
                     header("OpenAI-Project", request.openAIProject)
                 }
                 setBody(request)
             }
 
+            // Вычисляем время выполнения запроса
+            val responseTime = System.currentTimeMillis() - startTime
+
             // Логируем код ответа и заголовки
             logger.d("Заголовки ответа: ${response.headers}")
             val statusCode = response.status.value
-            logger.i("Получен ответ от API, код: $statusCode")
+            logger.i("Получен ответ от API, код: $statusCode, время: ${responseTime}мс")
 
             if (response.status.isSuccess()) {
                 // Если запрос выполнен успешно, возвращаем тело ответа
                 val completionResponse: LLMChatResponse = response.body()
-                
+
                 // Проверяем, что ответ содержит сообщение
                 val messageContent = completionResponse.choices.firstOrNull()?.message?.content
                 if (messageContent.isNullOrBlank()) {
@@ -97,7 +103,15 @@ internal class OpenAIApiImpl(private val json: Json) : OpenAIApi {
                 }
 
                 logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
-                return completionResponse
+                logger.d("Использовано токенов: вход=${completionResponse.usage?.promptTokens}, выход=${completionResponse.usage?.completionTokens}, всего=${completionResponse.usage?.totalTokens}")
+
+                return completionResponse.copy(
+                    usage = completionResponse.usage?.copy() ?: Usage(
+                        0,
+                        0,
+                        0
+                    )
+                )
             } else {
                 // Если произошла ошибка, выбрасываем исключение
                 val errorMessage = "Ошибка API: $statusCode"

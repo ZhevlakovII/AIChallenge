@@ -26,7 +26,15 @@ data class LLMChatResponse(
     @SerialName("choices") val choices: List<Choice>,
     @SerialName("created") val created: Long,
     @SerialName("model") val model: String,
-    @SerialName("object") val objectName: String
+    @SerialName("object") val objectName: String,
+    @SerialName("usage") val usage: Usage? = null
+)
+
+@Serializable
+data class Usage(
+    @SerialName("prompt_tokens") val promptTokens: Int,
+    @SerialName("completion_tokens") val completionTokens: Int,
+    @SerialName("total_tokens") val totalTokens: Int
 )
 
 @Serializable

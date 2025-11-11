@@ -1,4 +1,4 @@
-package ru.izhxx.aichallenge.ui
+package ru.izhxx.aichallenge.features.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -43,7 +43,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import ru.izhxx.aichallenge.AppDimens
 import ru.izhxx.aichallenge.domain.model.ResponseFormat
-import ru.izhxx.aichallenge.viewmodel.SettingsViewModel
 
 /**
  * Экран настроек LLM
