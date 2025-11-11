@@ -69,6 +69,11 @@ fun ChatScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
+                    // Кнопка очистки истории
+                    IconButton(onClick = { viewModel.clearHistory() }) {
+                        Text("🗑️")
+                    }
+
                     // Кнопка настроек
                     IconButton(onClick = onNavigateToSettings) {
                         // Используем текстовую иконку, но в реальном приложении нужно использовать настоящую иконку

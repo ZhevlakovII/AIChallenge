@@ -9,14 +9,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.izhxx.aichallenge.data.parser.ResponseParser
 import ru.izhxx.aichallenge.domain.model.Message
+import ru.izhxx.aichallenge.domain.model.MessageType
 import ru.izhxx.aichallenge.domain.model.openai.ChatMessage
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
+import ru.izhxx.aichallenge.domain.repository.LLMPromptSettingsRepository
 import ru.izhxx.aichallenge.domain.repository.LLMProviderSettingsRepository
 import java.util.UUID
 
 class ChatViewModel(
     private val llmClientRepository: LLMClientRepository,
     private val llmProviderSettingsRepositoryImpl: LLMProviderSettingsRepository,
+    private val llmPromptSettingsRepositoryImpl: LLMPromptSettingsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
@@ -32,12 +35,30 @@ class ChatViewModel(
             val welcomeMessage = Message(
                 id = UUID.randomUUID().toString(),
                 text = "Привет! Я Senior Android Developer и готов ответить на твои вопросы по Android-разработке.",
-                isFromUser = false
+                type = MessageType.TECHNICAL
             )
             addMessage(welcomeMessage)
 
+            // Проверяем и загружаем актуальные настройки
+            refreshSettings()
+
             // Проверяем наличие API ключа
             checkApiKeyConfigured()
+        }
+    }
+
+    /**
+     * Проверяет и обновляет актуальные настройки LLM
+     */
+    private fun refreshSettings() {
+        viewModelScope.launch {
+            try {
+                llmPromptSettingsRepositoryImpl.getSettings()
+                llmProviderSettingsRepositoryImpl.getSettings()
+            } catch (e: Exception) {
+                // Логируем ошибку, но не прерываем работу
+                e.printStackTrace()
+            }
         }
     }
 
@@ -52,7 +73,7 @@ class ChatViewModel(
                     Message(
                         id = UUID.randomUUID().toString(),
                         text = "Для начала работы необходимо настроить API ключ OpenAI в настройках.",
-                        isFromUser = false
+                        type = MessageType.TECHNICAL
                     )
                 )
                 _state.update {
@@ -83,6 +104,9 @@ class ChatViewModel(
     fun sendMessage(text: String) {
         if (text.isBlank() || state.value.isLoading) return
 
+        // Проверяем и обновляем актуальные настройки перед отправкой
+        refreshSettings()
+
         checkApiKeyConfigured()
         // Проверяем, настроен ли API ключ
         if (!state.value.apiKeyConfigured) {
@@ -98,7 +122,7 @@ class ChatViewModel(
         val userMessage = Message(
             id = UUID.randomUUID().toString(),
             text = text,
-            isFromUser = true
+            type = MessageType.USER
         )
         addMessage(userMessage)
 
@@ -108,24 +132,24 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 // Формируем список предыдущих сообщений для контекста
-                // Пропускаем текущее сообщение пользователя, так как оно уже в списке
+                // Исключаем технические сообщения и пропускаем текущее сообщение пользователя
                 val messages = state.value.messages
                     .dropLast(1)  // Убираем только что добавленное сообщение пользователя
-                    .filter { !it.isFromUser || it.id != userMessage.id }
+                    .filter { it.type != MessageType.TECHNICAL }  // Исключаем технические сообщения
                     .map {
                         ChatMessage(
-                            role = if (it.isFromUser) "user" else "assistant",
+                            role = if (it.type == MessageType.USER) "user" else "assistant",
                             content = it.text
                         )
                     }
                     .toMutableList()
 
-                    messages.add(
-                        ChatMessage(
-                            role = "user",
-                            content = text
-                        )
+                messages.add(
+                    ChatMessage(
+                        role = "user",
+                        content = text
                     )
+                )
 
                 // Отправляем запрос с полной историей
                 llmClientRepository.sendMessage(messages)
@@ -138,7 +162,7 @@ class ChatViewModel(
                             val assistantMessage = Message(
                                 id = UUID.randomUUID().toString(),
                                 text = displayText,
-                                isFromUser = false,
+                                type = MessageType.ASSISTANT,
                                 responseFormat = parsedResponse.format
                             )
                             addMessage(assistantMessage)
@@ -171,6 +195,22 @@ class ChatViewModel(
 
     fun clearError() {
         _state.update { it.copy(error = null) }
+    }
+
+    /**
+     * Очищает историю чата и добавляет приветственное сообщение
+     */
+    fun clearHistory() {
+        viewModelScope.launch {
+            val welcomeMessage = Message(
+                id = UUID.randomUUID().toString(),
+                text = "Привет! Я Senior Android Developer и готов ответить на твои вопросы по Android-разработке.",
+                type = MessageType.TECHNICAL
+            )
+            _state.update {
+                it.copy(messages = listOf(welcomeMessage), error = null, inputText = "")
+            }
+        }
     }
 
     private fun addMessage(message: Message) {

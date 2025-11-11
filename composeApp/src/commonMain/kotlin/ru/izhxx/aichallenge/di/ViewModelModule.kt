@@ -14,6 +14,7 @@ val viewModelModule = module {
         ChatViewModel(
             llmClientRepository = get(),
             llmProviderSettingsRepositoryImpl = get(),
+            llmPromptSettingsRepositoryImpl = get(),
         )
     }
     

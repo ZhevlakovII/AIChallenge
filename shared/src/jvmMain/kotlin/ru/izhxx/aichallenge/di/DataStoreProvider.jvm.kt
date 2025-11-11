@@ -10,7 +10,7 @@ import java.nio.file.Paths
 actual object DataStoreProvider : KoinComponent {
     actual fun providePreferencesDataStore(fileName: String): DataStore<Preferences> {
         val userHome = System.getProperty("user.home") ?: "."
-        val dataStoreFile = File(userHome, ".aichallenge/preferences.preferences_pb")
+        val dataStoreFile = File(userHome, ".aichallenge/${fileName}")
 
         return PreferenceDataStoreFactory.create {
             Paths.get(dataStoreFile.absolutePath).toFile()
