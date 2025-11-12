@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,14 +24,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -40,6 +40,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
 import ru.izhxx.aichallenge.AppDimens
 import ru.izhxx.aichallenge.domain.model.Message
+import ru.izhxx.aichallenge.domain.model.MessageType
+import ru.izhxx.aichallenge.features.chat.markdown.MarkdownText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +51,7 @@ fun ChatScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lazyListState = rememberLazyListState()
+    var showErrorDialog by remember { mutableStateOf(false) }
 
     // Автоматическая прокрутка к последнему сообщению
     LaunchedEffect(state.messages.size) {
@@ -91,7 +94,12 @@ fun ChatScreen(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(state.messages) { message ->
-                    MessageItem(message = message)
+                    MessageItem(
+                        message = message,
+                        showRetryButton = state.hasError && message.type == MessageType.USER &&
+                                message == state.messages.lastOrNull { it.type == MessageType.USER },
+                        onRetry = { viewModel.retryLastMessage() }
+                    )
                 }
 
                 if (state.isLoading) {
@@ -99,6 +107,18 @@ fun ChatScreen(
                         LoadingIndicator()
                     }
                 }
+            }
+
+            // Отображение ошибки над полем ввода
+            state.llmException?.let { exception ->
+                ErrorBanner(
+                    exception = exception,
+                    onShowDetails = { showErrorDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AppDimens.baseContentPadding)
+                        .padding(bottom = 8.dp)
+                )
             }
 
             // Поле ввода и кнопка отправки
@@ -112,24 +132,22 @@ fun ChatScreen(
             )
         }
 
-        // Отображение ошибок
-        state.error?.let { error ->
-            Snackbar(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                action = {
-                    TextButton(onClick = { viewModel.clearError() }) {
-                        Text("ОК")
-                    }
-                }
-            ) {
-                Text(error)
-            }
+        // Диалог с подробной информацией об ошибке
+        if (showErrorDialog && state.llmException != null) {
+            ErrorDetailsDialog(
+                exception = state.llmException!!,
+                onDismiss = { showErrorDialog = false }
+            )
         }
     }
 }
 
 @Composable
-fun MessageItem(message: Message) {
+fun MessageItem(
+    message: Message,
+    showRetryButton: Boolean = false,
+    onRetry: () -> Unit = {}
+) {
     val backgroundColor = if (message.isFromUser) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
     } else {
@@ -149,14 +167,43 @@ fun MessageItem(message: Message) {
         Column(
             modifier = Modifier.padding(vertical = 4.dp).widthIn(max = 300.dp)
         ) {
-            Card(
-                shape = RoundedCornerShape(12.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                SelectionContainer {
-                    Text(
-                        text = message.text,
-                        modifier = Modifier.background(backgroundColor).padding(12.dp)
-                    )
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                ) {
+                    if (message.isFromUser) {
+                        Text(
+                            text = message.text,
+                            modifier = Modifier
+                                .background(backgroundColor)
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        )
+                    } else {
+                        MarkdownText(
+                            content = message.content
+                                ?: ru.izhxx.aichallenge.domain.model.MessageContent.Plain(message.text),
+                            modifier = Modifier
+                                .background(backgroundColor)
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        )
+                    }
+                }
+
+                // Показываем иконку повторить, если это последнее сообщение пользователя и есть ошибка
+                if (showRetryButton) {
+                    IconButton(
+                        onClick = onRetry,
+                        modifier = Modifier.padding(start = 4.dp)
+                    ) {
+                        Text("🔄", modifier = Modifier.padding(4.dp))
+                    }
                 }
             }
 
@@ -164,7 +211,7 @@ fun MessageItem(message: Message) {
             if (!message.isFromUser && message.metrics != null) {
                 val metrics = message.metrics
                 val timeSeconds = String.format("%.2f", metrics?.responseTime?.div(1000.0))
-                
+
                 Text(
                     text = "⏱️ ${timeSeconds}с | 🔤 Входные: ${metrics?.tokensInput} | Выходные: ${metrics?.tokensOutput} | Всего: ${metrics?.tokensTotal}",
                     modifier = Modifier.padding(top = 4.dp).padding(horizontal = 4.dp),

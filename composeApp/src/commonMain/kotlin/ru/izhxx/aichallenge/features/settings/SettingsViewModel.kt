@@ -44,6 +44,7 @@ class SettingsViewModel(
                         model = providerSettings.model,
                         openaiProject = providerSettings.openaiProject,
                         temperature = promptSettings.temperature.toString(),
+                        maxTokens = promptSettings.maxTokens.toString(),
                         responseFormat = promptSettings.responseFormat,
                         systemPrompt = promptSettings.systemPrompt,
                         isLoading = false
@@ -86,6 +87,13 @@ class SettingsViewModel(
      */
     fun updateTemperature(temperature: String) {
         _state.update { it.copy(temperature = temperature) }
+    }
+    
+    /**
+     * Обновляет значение maxTokens в state
+     */
+    fun updateMaxTokens(maxTokens: String) {
+        _state.update { it.copy(maxTokens = maxTokens) }
     }
     
     /**
@@ -153,6 +161,20 @@ class SettingsViewModel(
             return
         }
         
+        // Проверяем и парсим maxTokens
+        val maxTokensValue = try {
+            currentState.maxTokens.toIntOrNull()
+        } catch (e: Exception) {
+            null
+        }
+        
+        if (maxTokensValue == null || maxTokensValue <= 0) {
+            _state.update { 
+                it.copy(error = "Max tokens должен быть положительным числом")
+            }
+            return
+        }
+        
         // Проверяем системный промпт
         if (currentState.systemPrompt.isBlank()) {
             _state.update { 
@@ -172,6 +194,7 @@ class SettingsViewModel(
         
         val promptSettings = LLMPromptSettings(
             temperature = temperatureValue,
+            maxTokens = maxTokensValue,
             responseFormat = currentState.responseFormat,
             systemPrompt = currentState.systemPrompt.trim()
         )
@@ -208,6 +231,7 @@ class SettingsViewModel(
                 model = defaultProviderSettings.model,
                 openaiProject = defaultProviderSettings.openaiProject,
                 temperature = defaultPromptSettings.temperature.toString(),
+                maxTokens = defaultPromptSettings.maxTokens.toString(),
                 responseFormat = defaultPromptSettings.responseFormat,
                 systemPrompt = defaultPromptSettings.systemPrompt,
                 error = null
@@ -242,6 +266,7 @@ data class SettingsState(
     
     // Настройки промпта
     val temperature: String = "0.7",
+    val maxTokens: String = "4096",
     val responseFormat: ResponseFormat = ResponseFormat.XML,
     val systemPrompt: String = "",
     

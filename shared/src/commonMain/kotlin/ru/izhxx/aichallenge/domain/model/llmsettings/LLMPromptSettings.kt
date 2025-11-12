@@ -19,6 +19,12 @@ data class LLMPromptSettings(
     val temperature: Double = 0.7,
 
     /**
+     * Максимальное количество токенов для ответа
+     * Ограничивает длину генерируемого текста
+     */
+    val maxTokens: Int = LLMDefaults.DEFAULT_MAX_TOKENS,
+
+    /**
      * Формат ответа LLM
      */
     val responseFormat: ResponseFormat = ResponseFormat.XML,

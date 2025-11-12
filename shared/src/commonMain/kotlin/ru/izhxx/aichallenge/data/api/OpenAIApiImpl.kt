@@ -14,6 +14,8 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import ru.izhxx.aichallenge.common.Logger
+import ru.izhxx.aichallenge.domain.model.LLMException
+import ru.izhxx.aichallenge.domain.model.LLMExceptionFactory
 import ru.izhxx.aichallenge.domain.model.openai.LLMChatRequest
 import ru.izhxx.aichallenge.domain.model.openai.LLMChatResponse
 import ru.izhxx.aichallenge.domain.model.openai.Usage
@@ -55,13 +57,13 @@ internal class OpenAIApiImpl(private val json: Json) : OpenAIApi {
         // Проверяем наличие API ключа
         if (request.apiKey.isEmpty()) {
             logger.w("API ключ не настроен")
-            throw Exception("API ключ LLM не настроен. Пожалуйста, настройте его в настройках.")
+            throw LLMExceptionFactory.createApiKeyNotConfigured()
         }
 
         // Проверяем URL API
         if (request.apiUrl.isEmpty()) {
             logger.w("URL API не настроен")
-            throw Exception("URL API не настроен. Пожалуйста, настройте его в настройках.")
+            throw LLMExceptionFactory.createApiUrlNotConfigured()
         }
 
         // Логируем детали запроса для отладки
@@ -99,7 +101,7 @@ internal class OpenAIApiImpl(private val json: Json) : OpenAIApi {
                 val messageContent = completionResponse.choices.firstOrNull()?.message?.content
                 if (messageContent.isNullOrBlank()) {
                     logger.e("Пустой ответ от API")
-                    throw Exception("Пустой ответ от LLM API")
+                    throw LLMExceptionFactory.createEmptyResponse()
                 }
 
                 logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
@@ -114,14 +116,22 @@ internal class OpenAIApiImpl(private val json: Json) : OpenAIApi {
                 )
             } else {
                 // Если произошла ошибка, выбрасываем исключение
-                val errorMessage = "Ошибка API: $statusCode"
-                logger.e(errorMessage)
-                throw Exception(errorMessage)
+                val errorBody = try {
+                    response.body<String>()
+                } catch (e: Exception) {
+                    "Не удалось получить тело ошибки"
+                }
+                logger.e("Ошибка API: $statusCode, Body: $errorBody")
+                throw LLMExceptionFactory.createNetworkError(statusCode, errorBody)
             }
+        } catch (e: LLMException) {
+            // Если это уже LLMException, просто переброшу её
+            logger.e("LLM ошибка: ${e.getFullErrorInfo()}")
+            throw e
         } catch (e: Exception) {
             // Обрабатываем исключения, которые могли возникнуть при выполнении запроса
             logger.e("Ошибка при отправке запроса", e)
-            throw Exception("Ошибка при отправке запроса: ${e.message}", e)
+            throw LLMExceptionFactory.createConnectionError(e.message ?: "Неизвестная ошибка")
         }
     }
 }

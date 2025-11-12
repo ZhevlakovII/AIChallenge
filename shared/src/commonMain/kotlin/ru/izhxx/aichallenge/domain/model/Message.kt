@@ -13,7 +13,8 @@ data class Message(
     val type: MessageType,
     val timestamp: Long = System.currentTimeMillis(),
     val responseFormat: ResponseFormat? = null,
-    val metrics: RequestMetrics? = null
+    val metrics: RequestMetrics? = null,
+    val content: MessageContent? = null
 ) {
     /**
      * Вспомогательное свойство для обратной совместимости

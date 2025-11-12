@@ -4,6 +4,8 @@ import ru.izhxx.aichallenge.common.Logger
 import ru.izhxx.aichallenge.data.api.OpenAIApi
 import ru.izhxx.aichallenge.data.parser.ResponseParser
 import ru.izhxx.aichallenge.domain.model.FormatSystemPrompts
+import ru.izhxx.aichallenge.domain.model.LLMException
+import ru.izhxx.aichallenge.domain.model.LLMExceptionFactory
 import ru.izhxx.aichallenge.domain.model.ParsedResponse
 import ru.izhxx.aichallenge.domain.model.RequestMetrics
 import ru.izhxx.aichallenge.domain.model.openai.ChatMessage
@@ -60,7 +62,7 @@ class LLMClientRepositoryImpl(
         // Проверяем API ключ
         if (providerSettings.apiKey.isBlank()) {
             logger.w("API ключ не настроен")
-            return Result.failure(Exception("API ключ LLM не настроен. Пожалуйста, настройте его в настройках."))
+            return Result.failure(LLMExceptionFactory.createApiKeyNotConfigured())
         }
 
         // Получаем эффективный системный промпт
@@ -77,6 +79,7 @@ class LLMClientRepositoryImpl(
             model = providerSettings.model,
             messages = messages,
             temperature = promptSettings.temperature,
+            maxTokens = promptSettings.maxTokens,
             apiKey = providerSettings.apiKey,
             apiUrl = providerSettings.apiUrl,
             openAIProject = providerSettings.openaiProject
@@ -97,7 +100,7 @@ class LLMClientRepositoryImpl(
 
             if (messageContent.isNullOrBlank()) {
                 logger.e("Пустой ответ от API")
-                return Result.failure(Exception("Пустой ответ от LLM API"))
+                return Result.failure(LLMExceptionFactory.createEmptyResponse())
             }
 
             logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
@@ -119,10 +122,14 @@ class LLMClientRepositoryImpl(
             return parsedResult.map { parsed ->
                 parsed.copy(metrics = metrics)
             }
+        } catch (e: LLMException) {
+            // Если это уже LLMException, просто вернём её в Result
+            logger.e("LLM ошибка: ${e.getFullErrorInfo()}")
+            return Result.failure(e)
         } catch (e: Exception) {
             // Если произошла ошибка при выполнении запроса или парсинге ответа
             logger.e("Ошибка при выполнении запроса или парсинге ответа", e)
-            return Result.failure(e)
+            return Result.failure(LLMExceptionFactory.createGenericError(e.message ?: "Неизвестная ошибка"))
         }
     }
 }

@@ -261,6 +261,34 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Секция maxTokens
+                Text(
+                    text = "Максимум токенов",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Text(
+                    text = "Максимальное количество токенов в ответе:",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                OutlinedTextField(
+                    value = state.maxTokens,
+                    onValueChange = { viewModel.updateMaxTokens(it) },
+                    label = { Text("Max Tokens") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 // Секция формата ответа
                 Text(
                     text = "Формат ответа",

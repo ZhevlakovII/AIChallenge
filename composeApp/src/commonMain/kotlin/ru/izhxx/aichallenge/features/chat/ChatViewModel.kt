@@ -7,7 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ru.izhxx.aichallenge.data.parser.MessageContentBuilder
 import ru.izhxx.aichallenge.data.parser.ResponseParser
+import ru.izhxx.aichallenge.domain.model.LLMException
 import ru.izhxx.aichallenge.domain.model.Message
 import ru.izhxx.aichallenge.domain.model.MessageType
 import ru.izhxx.aichallenge.domain.model.openai.ChatMessage
@@ -24,10 +26,6 @@ class ChatViewModel(
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state.asStateFlow()
-
-    // Флаг, показывающий необходимость открыть экран настроек
-    private val _navigateToSettings = MutableStateFlow(false)
-    val navigateToSettings: StateFlow<Boolean> = _navigateToSettings
 
     // Добавляем приветственное сообщение при инициализации и проверяем наличие API ключа
     init {
@@ -87,20 +85,6 @@ class ChatViewModel(
         }
     }
 
-    /**
-     * Запускает навигацию на экран настроек
-     */
-    fun navigateToSettings() {
-        _navigateToSettings.value = true
-    }
-
-    /**
-     * Сбрасывает флаг навигации на экран настроек
-     */
-    fun onNavigatedToSettings() {
-        _navigateToSettings.value = false
-    }
-
     fun sendMessage(text: String) {
         if (text.isBlank() || state.value.isLoading) return
 
@@ -112,7 +96,12 @@ class ChatViewModel(
         if (!state.value.apiKeyConfigured) {
             _state.update {
                 it.copy(
-                    error = "API ключ OpenAI не настроен. Пожалуйста, настройте его в настройках."
+                    llmException = LLMException(
+                        errorCode = "ERROR_NO_API_KEY",
+                        userFriendlyMessage = "API ключ не настроен",
+                        detailedMessage = "API ключ OpenAI не был найден в настройках. Пожалуйста, перейдите в настройки и добавьте ваш API ключ."
+                    ),
+                    hasError = true
                 )
             }
             return
@@ -127,15 +116,38 @@ class ChatViewModel(
         addMessage(userMessage)
 
         // Устанавливаем состояние загрузки
-        _state.update { it.copy(isLoading = true, inputText = "", error = null) }
+        _state.update { it.copy(isLoading = true, inputText = "", llmException = null, hasError = false) }
 
+        performSendMessage(text)
+    }
+
+    /**
+     * Повторно отправляет последнее сообщение при ошибке
+     */
+    fun retryLastMessage() {
+        val currentState = state.value
+        
+        // Ищем последнее сообщение пользователя
+        val lastUserMessage = currentState.messages
+            .filter { it.type != MessageType.TECHNICAL }
+            .lastOrNull { it.type == MessageType.USER }
+        
+        if (lastUserMessage != null) {
+            _state.update { it.copy(isLoading = true, llmException = null, hasError = false) }
+            performSendMessage(lastUserMessage.text)
+        }
+    }
+
+    /**
+     * Выполняет отправку сообщения
+     */
+    private fun performSendMessage(text: String) {
         viewModelScope.launch {
             try {
                 // Формируем список предыдущих сообщений для контекста
-                // Исключаем технические сообщения и пропускаем текущее сообщение пользователя
+                // Исключаем технические сообщения
                 val messages = state.value.messages
-                    .dropLast(1)  // Убираем только что добавленное сообщение пользователя
-                    .filter { it.type != MessageType.TECHNICAL }  // Исключаем технические сообщения
+                    .filter { it.type != MessageType.TECHNICAL }
                     .map {
                         ChatMessage(
                             role = if (it.type == MessageType.USER) "user" else "assistant",
@@ -144,13 +156,6 @@ class ChatViewModel(
                     }
                     .toMutableList()
 
-                messages.add(
-                    ChatMessage(
-                        role = "user",
-                        content = text
-                    )
-                )
-
                 // Отправляем запрос с полной историей
                 llmClientRepository.sendMessage(messages)
                     .fold(
@@ -158,32 +163,54 @@ class ChatViewModel(
                             // Получаем отображаемый текст из парсённого ответа
                             val displayText = ResponseParser.getDisplayText(parsedResponse)
 
+                            // Строим структурированное содержимое сообщения
+                            val messageContent = MessageContentBuilder.buildMessageContent(
+                                parsedResponse = parsedResponse,
+                                format = parsedResponse.format
+                            )
+
                             // Добавляем ответ от агента с информацией о формате и метриках
                             val assistantMessage = Message(
                                 id = UUID.randomUUID().toString(),
                                 text = displayText,
                                 type = MessageType.ASSISTANT,
                                 responseFormat = parsedResponse.format,
-                                metrics = parsedResponse.metrics
+                                metrics = parsedResponse.metrics,
+                                content = messageContent
                             )
                             addMessage(assistantMessage)
 
-                            _state.update { it.copy(isLoading = false) }
+                            _state.update { it.copy(isLoading = false, hasError = false, llmException = null) }
                         },
                         onFailure = { error ->
+                            val llmException = error as? LLMException
+                                ?: LLMException(
+                                    errorCode = "ERROR_GENERIC",
+                                    userFriendlyMessage = "Ошибка обработки ответа",
+                                    detailedMessage = error.message ?: "Неизвестная ошибка"
+                                )
+                            
                             _state.update {
                                 it.copy(
                                     isLoading = false,
-                                    error = "Ошибка при обработке ответа: ${error.message ?: "Неизвестная ошибка"}"
+                                    hasError = true,
+                                    llmException = llmException
                                 )
                             }
                         }
                     )
             } catch (e: Exception) {
+                val llmException = LLMException(
+                    errorCode = "ERROR_GENERIC",
+                    userFriendlyMessage = "Неизвестная ошибка",
+                    detailedMessage = e.message ?: "Неизвестная ошибка"
+                )
+                
                 _state.update {
                     it.copy(
                         isLoading = false,
-                        error = "Ошибка: ${e.message ?: "Неизвестная ошибка"}"
+                        hasError = true,
+                        llmException = llmException
                     )
                 }
             }
@@ -195,7 +222,7 @@ class ChatViewModel(
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(llmException = null, hasError = false) }
     }
 
     /**
@@ -209,7 +236,7 @@ class ChatViewModel(
                 type = MessageType.TECHNICAL
             )
             _state.update {
-                it.copy(messages = listOf(welcomeMessage), error = null, inputText = "")
+                it.copy(messages = listOf(welcomeMessage), llmException = null, hasError = false, inputText = "")
             }
         }
     }
@@ -225,6 +252,10 @@ data class ChatState(
     val messages: List<Message> = emptyList(),
     val inputText: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val llmException: LLMException? = null,
+    val hasError: Boolean = false,
     val apiKeyConfigured: Boolean = false
-)
+) {
+    // Для совместимости оставляем свойство error
+    val error: String? get() = if (hasError) llmException?.getShortErrorInfo() else null
+}

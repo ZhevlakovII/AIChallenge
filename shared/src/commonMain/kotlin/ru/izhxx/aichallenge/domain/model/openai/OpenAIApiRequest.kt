@@ -13,6 +13,7 @@ data class LLMChatRequest(
     @SerialName("model") val model: String,
     @SerialName("messages") val messages: List<ChatMessage>,
     @SerialName("temperature") val temperature: Double,
+    @SerialName("max_tokens") val maxTokens: Int,
     
     // Транзиентные поля, которые не включаются в сериализацию при отправке на сервер
     @Transient val apiKey: String = "",
