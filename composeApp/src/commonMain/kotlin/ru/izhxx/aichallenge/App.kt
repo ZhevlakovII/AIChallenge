@@ -14,8 +14,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import ru.izhxx.aichallenge.ui.ChatScreen
-import ru.izhxx.aichallenge.ui.SettingsScreen
+import ru.izhxx.aichallenge.features.chat.presentation.ChatScreen
+import ru.izhxx.aichallenge.features.settings.SettingsScreen
 
 /**
  * Главные экраны приложения
