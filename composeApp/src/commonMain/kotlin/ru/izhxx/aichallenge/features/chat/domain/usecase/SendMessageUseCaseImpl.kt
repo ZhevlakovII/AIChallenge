@@ -18,19 +18,36 @@ class SendMessageUseCaseImpl(
         text: String,
         previousMessages: List<LLMMessage>
     ): Result<LLMResponse> {
+        // Вызываем перегруженную версию метода без суммаризации
+        return invoke(text, previousMessages, null)
+    }
+    
+    override suspend fun invoke(
+        text: String,
+        previousMessages: List<LLMMessage>,
+        summary: String?
+    ): Result<LLMResponse> {
         // Проверяем наличие API ключа
         val apiKey = providerSettingsRepository.getApiKey()
         if (apiKey.isEmpty()) {
             return Result.failure(IllegalStateException("API ключ не настроен"))
         }
 
-        // Формируем сообщение пользователя
-        val userMessage = LLMMessage(
-            role = MessageRole.USER,
-            content = text
-        )
+        // Проверяем, содержит ли последнее сообщение текст, который мы отправляем
+        val lastMessage = previousMessages.lastOrNull()
+        val messagesForRequest = if (lastMessage?.role == MessageRole.USER && lastMessage.content == text) {
+            // Если последнее сообщение уже содержит этот текст, используем сообщения как есть
+            previousMessages
+        } else {
+            // Иначе добавляем новое сообщение пользователя
+            val userMessage = LLMMessage(
+                role = MessageRole.USER,
+                content = text
+            )
+            previousMessages + userMessage
+        }
 
-        // Отправляем запрос через репозиторий
-        return llmClientRepository.sendMessages(previousMessages + userMessage)
+        // Отправляем запрос через репозиторий с учетом суммаризации
+        return llmClientRepository.sendMessagesWithSummary(messagesForRequest, summary)
     }
 }

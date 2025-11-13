@@ -55,5 +55,9 @@ val sharedModule = module {
         )
     }
 
-    includes(parsersModule)
+    includes(
+        parsersModule,
+        compressionModule,
+        metricsModule
+    )
 }

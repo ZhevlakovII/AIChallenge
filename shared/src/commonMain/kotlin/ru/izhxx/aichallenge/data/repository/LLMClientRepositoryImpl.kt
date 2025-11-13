@@ -30,17 +30,30 @@ class LLMClientRepositoryImpl(
     private val logger = Logger.forClass(this)
 
     /**
-     * Получает эффективный системный промпт с учетом настроек
+     * Получает эффективный системный промпт с учетом настроек и суммаризации
      */
-    private suspend fun getEffectiveSystemPrompt(): LLMMessage {
+    private suspend fun getEffectiveSystemPrompt(summary: String?): LLMMessage {
         val promptSettings = llmConfigRepository.getSettings()
+        
+        val basePrompt = """
+            ${promptSettings.systemPrompt}
+            ${FormatSystemPrompts.getFormatPrompt(promptSettings.responseFormat)}
+        """.trimIndent()
+        
+        // Если есть суммаризация, добавляем её к системному промпту
+        val finalPrompt = if (summary != null) {
+            """
+            $basePrompt
+            
+            $summary
+            """.trimIndent()
+        } else {
+            basePrompt
+        }
 
         return LLMMessage(
             role = MessageRole.SYSTEM,
-            content = """
-                ${promptSettings.systemPrompt}
-                ${FormatSystemPrompts.getFormatPrompt(promptSettings.responseFormat)}
-            """.trimIndent()
+            content = finalPrompt
         )
     }
 
@@ -50,6 +63,23 @@ class LLMClientRepositoryImpl(
      * @return результат выполнения запроса с разобранным ответом
      */
     override suspend fun sendMessages(messages: List<LLMMessage>): Result<LLMResponse> {
+        if (messages.isEmpty()) {
+            return Result.failure(IllegalStateException("Empty messages"))
+        }
+        
+        return sendMessagesWithSummary(messages, null)
+    }
+    
+    /**
+     * Отправляет цепочку диалога с LLM с учетом суммаризации
+     * @param messages сообщения пользователя
+     * @param summary суммаризация предыдущей истории диалога (может быть null)
+     * @return результат выполнения запроса с разобранным ответом
+     */
+    override suspend fun sendMessagesWithSummary(
+        messages: List<LLMMessage>,
+        summary: String?
+    ): Result<LLMResponse> {
         if (messages.isEmpty()) {
             return Result.failure(IllegalStateException("Empty messages"))
         }
@@ -63,11 +93,11 @@ class LLMClientRepositoryImpl(
             val llmConfig = llmConfigRepository.getSettings()
             val providerSettings = providerSettingsRepository.getSettings()
 
-            // Получаем эффективный системный промпт
-            val systemMessage = getEffectiveSystemPrompt()
+            // Получаем эффективный системный промпт с учетом суммаризации
+            val systemMessage = getEffectiveSystemPrompt(summary)
 
-            // Формируем список сообщений: система + предыдущие сообщения + текущее
-            val messages = buildList(messages.size + 1) {
+            // Формируем список сообщений: система + предыдущие сообщения
+            val messagesWithSystem = buildList(messages.size + 1) {
                 add(systemMessage)
                 addAll(messages)
             }
@@ -75,7 +105,7 @@ class LLMClientRepositoryImpl(
             // Создаем запрос
             val request = LLMChatRequestDTO(
                 model = providerSettings.model,
-                messages = messages.map { message ->
+                messages = messagesWithSystem.map { message ->
                     ChatMessageDTO(
                         role = message.role.key,
                         content = message.content
