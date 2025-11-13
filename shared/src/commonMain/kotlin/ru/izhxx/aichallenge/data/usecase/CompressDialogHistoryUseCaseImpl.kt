@@ -19,10 +19,14 @@ class CompressDialogHistoryUseCaseImpl(
     // Порог количества сообщений для сжатия
     private val compressionThreshold = 5
 
-    override suspend fun invoke(messages: List<LLMMessage>): Triple<String?, List<LLMMessage>, DialogSummaryMetrics?> {
-        // Получаем суммаризацию и метрики от сервиса
+    override suspend fun invoke(
+        messages: List<LLMMessage>,
+        previousSummary: String?
+    ): Triple<String?, List<LLMMessage>, DialogSummaryMetrics?> {
+        // Получаем суммаризацию и метрики от сервиса, передавая предыдущую суммаризацию
         val (summary, metrics) = compressionService.compressHistory(
             messages = messages,
+            previousSummary = previousSummary,
             compressionThreshold = compressionThreshold
         )
 

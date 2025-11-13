@@ -10,7 +10,11 @@ interface DialogSummaryRepository {
     /**
      * Создает суммаризацию диалога на основе списка сообщений
      * @param messages список сообщений для суммаризации
+     * @param previousSummary предыдущая суммаризация (если есть)
      * @return результат с суммаризацией диалога и метриками использования или ошибкой
      */
-    suspend fun createSummary(messages: List<LLMMessage>): Result<Pair<String, DialogSummaryMetrics>>
+    suspend fun createSummary(
+        messages: List<LLMMessage>,
+        previousSummary: String? = null
+    ): Result<Pair<String, DialogSummaryMetrics>>
 }

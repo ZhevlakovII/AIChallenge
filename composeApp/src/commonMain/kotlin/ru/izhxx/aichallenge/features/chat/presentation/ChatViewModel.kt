@@ -198,8 +198,8 @@ class ChatViewModel(
                     }
                     val originalHistorySize = historySnapshot.size
 
-                    // Используем копию для сжатия
-                    val compressionResult = compressDialogHistoryUseCase(historySnapshot)
+                    // Используем копию для сжатия и передаем текущую суммаризацию для инкрементальной суммаризации
+                    val compressionResult = compressDialogHistoryUseCase(historySnapshot, currentSummary)
                     val newSummary = compressionResult.first
                     val compressedMessages = compressionResult.second
                     val summaryMetrics = compressionResult.third

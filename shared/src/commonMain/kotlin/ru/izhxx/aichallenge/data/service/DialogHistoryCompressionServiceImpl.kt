@@ -19,6 +19,7 @@ class DialogHistoryCompressionServiceImpl(
 
     override suspend fun compressHistory(
         messages: List<LLMMessage>,
+        previousSummary: String?,
         compressionThreshold: Int
     ): Pair<String?, DialogSummaryMetrics?> {
         // Фильтруем только сообщения пользователя и ассистента
@@ -31,17 +32,35 @@ class DialogHistoryCompressionServiceImpl(
             return Pair(null, null)
         }
 
-        // Если сообщений меньше порога, возвращаем null (сжатие не требуется)
+        // Если сообщений меньше порога, возвращаем предыдущую суммаризацию (если есть)
         if (messagesForSummary.size < compressionThreshold) {
             logger.d("История диалога меньше порога сжатия ($compressionThreshold), сжатие не требуется")
-            return Pair(null, null)
+            // Возвращаем предыдущую суммаризацию без изменений, если она есть
+            return if (previousSummary != null) {
+                logger.d("Возвращаем предыдущую суммаризацию без изменений")
+                Pair(previousSummary, null)
+            } else {
+                Pair(null, null)
+            }
         }
         
         try {
             logger.d("Создаем суммаризацию диалога (${messagesForSummary.size} сообщений)")
             
             // Используем обновленный репозиторий, который возвращает и суммаризацию, и метрики
-            val summaryResult = dialogSummaryRepository.createSummary(messagesForSummary)
+            // Создаем новую суммаризацию для текущих сообщений
+            val summaryResult = if (previousSummary != null) {
+                // Если есть предыдущая суммаризация, включаем её в контекст
+                logger.d("Создаем суммаризацию с учетом предыдущей суммаризации")
+                dialogSummaryRepository.createSummary(
+                    messages = messagesForSummary,
+                    previousSummary = previousSummary
+                )
+            } else {
+                // Если предыдущей суммаризации нет, создаем новую
+                logger.d("Создаем новую суммаризацию без предыдущего контекста")
+                dialogSummaryRepository.createSummary(messagesForSummary)
+            }
             
             return summaryResult.fold(
                 onSuccess = { (summary, metrics) ->

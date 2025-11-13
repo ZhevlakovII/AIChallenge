@@ -64,7 +64,10 @@ class DialogSummaryRepositoryImpl(
     /**
      * Создает суммаризацию диалога на основе списка сообщений
      */
-    override suspend fun createSummary(messages: List<LLMMessage>): Result<Pair<String, DialogSummaryMetrics>> {
+    override suspend fun createSummary(
+        messages: List<LLMMessage>,
+        previousSummary: String?
+    ): Result<Pair<String, DialogSummaryMetrics>> {
         if (messages.isEmpty()) {
             return Result.failure(IllegalStateException("Empty messages for summarization"))
         }
@@ -90,10 +93,24 @@ class DialogSummaryRepositoryImpl(
                 content = summarySystemPrompt
             )
             
-            // Добавляем метаинформацию о требуемом коэффициенте сжатия
+            // Добавляем метаинформацию о требуемом коэффициенте сжатия и предыдущую суммаризацию
+            val contextInstruction = if (previousSummary != null) {
+                // Если есть предыдущая суммаризация, включаем ее в инструкцию
+                """
+                ВАЖНО: Учти предыдущую суммаризацию диалога:
+                $previousSummary
+                
+                Объедини её с суммаризацией новых сообщений, создав единый полный контекст.
+                Сожми следующие ${messages.size} сообщений, сохраняя их ключевую информацию.
+                """
+            } else {
+                // Если предыдущей суммаризации нет, просто просим сжать диалог
+                "Сожми следующий диалог, сохраняя их ключевую информацию. Текущее количество сообщений: ${messages.size}."
+            }
+            
             val userInstructionMessage = LLMMessage(
                 role = MessageRole.USER,
-                content = "Сожми следующий диалог минимум в 5 раз по количеству токенов. Текущее количество сообщений: ${messages.size}."
+                content = contextInstruction
             )
             
             // Формируем список сообщений: система + инструкция + сообщения для суммаризации

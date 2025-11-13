@@ -10,7 +10,11 @@ interface CompressDialogHistoryUseCase {
     /**
      * Сжимает историю диалога, если количество сообщений превышает порог
      * @param messages история сообщений
+     * @param previousSummary предыдущая суммаризация (если есть)
      * @return тройка: суммаризация (или null, если сжатие не требуется), обновленная история сообщений и метрики (или null)
      */
-    suspend operator fun invoke(messages: List<LLMMessage>): Triple<String?, List<LLMMessage>, DialogSummaryMetrics?>
+    suspend operator fun invoke(
+        messages: List<LLMMessage>,
+        previousSummary: String? = null
+    ): Triple<String?, List<LLMMessage>, DialogSummaryMetrics?>
 }
