@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import ru.izhxx.aichallenge.features.chat.ChatScreen
+import ru.izhxx.aichallenge.features.chat.presentation.ChatScreen
 import ru.izhxx.aichallenge.features.settings.SettingsScreen
 
 /**

@@ -1,26 +1,29 @@
 package ru.izhxx.aichallenge.data.repository
 
 import ru.izhxx.aichallenge.common.Logger
+import ru.izhxx.aichallenge.common.safeApiCall
 import ru.izhxx.aichallenge.data.api.OpenAIApi
-import ru.izhxx.aichallenge.data.parser.ResponseParser
-import ru.izhxx.aichallenge.domain.model.FormatSystemPrompts
-import ru.izhxx.aichallenge.domain.model.LLMException
-import ru.izhxx.aichallenge.domain.model.LLMExceptionFactory
-import ru.izhxx.aichallenge.domain.model.ParsedResponse
-import ru.izhxx.aichallenge.domain.model.RequestMetrics
-import ru.izhxx.aichallenge.domain.model.openai.ChatMessage
-import ru.izhxx.aichallenge.domain.model.openai.LLMChatRequest
+import ru.izhxx.aichallenge.data.model.ChatMessageDTO
+import ru.izhxx.aichallenge.data.model.LLMChatRequestDTO
+import ru.izhxx.aichallenge.data.parser.core.ResultParser
+import ru.izhxx.aichallenge.domain.model.MessageRole
+import ru.izhxx.aichallenge.domain.model.config.FormatSystemPrompts
+import ru.izhxx.aichallenge.domain.model.message.LLMMessage
+import ru.izhxx.aichallenge.domain.model.response.LLMChoice
+import ru.izhxx.aichallenge.domain.model.response.LLMResponse
+import ru.izhxx.aichallenge.domain.model.response.LLMUsage
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
-import ru.izhxx.aichallenge.domain.repository.LLMPromptSettingsRepository
-import ru.izhxx.aichallenge.domain.repository.LLMProviderSettingsRepository
+import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
+import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
 
 /**
  * Реализация репозитория для работы с LLM клиентом
  */
 class LLMClientRepositoryImpl(
     private val openAIApi: OpenAIApi,
-    private val providerSettingsRepository: LLMProviderSettingsRepository,
-    private val promptSettingsRepository: LLMPromptSettingsRepository
+    private val llmConfigRepository: LLMConfigRepository,
+    private val providerSettingsRepository: ProviderSettingsRepository,
+    private val resultParser: ResultParser,
 ) : LLMClientRepository {
 
     // Создаем логгер
@@ -29,66 +32,69 @@ class LLMClientRepositoryImpl(
     /**
      * Получает эффективный системный промпт с учетом настроек
      */
-    private suspend fun getEffectiveSystemPrompt(): ChatMessage {
-        val promptSettings = promptSettingsRepository.getSettings()
-        
-        val basePrompt = promptSettings.systemPrompt
-        
-        val formatInstructions = FormatSystemPrompts.getFormatPrompt(promptSettings.responseFormat)
-        
-        return ChatMessage(
-            role = "system",
+    private suspend fun getEffectiveSystemPrompt(): LLMMessage {
+        val promptSettings = llmConfigRepository.getSettings()
+
+        return LLMMessage(
+            role = MessageRole.SYSTEM,
             content = """
-                $basePrompt
-                $formatInstructions
+                ${promptSettings.systemPrompt}
+                ${FormatSystemPrompts.getFormatPrompt(promptSettings.responseFormat)}
             """.trimIndent()
         )
     }
+
     /**
-     * Отправляет сообщение без истории
+     * Отправляет цепочку диалога с LLM
      * @param messages сообщения пользователя
      * @return результат выполнения запроса с разобранным ответом
      */
-    override suspend fun sendMessage(messages: List<ChatMessage>): Result<ParsedResponse> {
-        if (messages.isEmpty()) return Result.failure(Exception("Сообщения не переданы"))
-        val lastMessageContent = messages.last().content
-
-        logger.d("Отправка сообщения: \"${lastMessageContent.take(50)}${if (lastMessageContent.length > 50) "..." else ""}\"")
-
-        // Получаем настройки из репозиториев
-        val providerSettings = providerSettingsRepository.getSettings()
-        val promptSettings = promptSettingsRepository.getSettings()
-
-        // Проверяем API ключ
-        if (providerSettings.apiKey.isBlank()) {
-            logger.w("API ключ не настроен")
-            return Result.failure(LLMExceptionFactory.createApiKeyNotConfigured())
+    override suspend fun sendMessages(messages: List<LLMMessage>): Result<LLMResponse> {
+        if (messages.isEmpty()) {
+            return Result.failure(IllegalStateException("Empty messages"))
         }
 
-        // Получаем эффективный системный промпт
-        val systemMessage = getEffectiveSystemPrompt()
+        return safeApiCall(logger) {
+            val lastMessageContent = messages.last().content
 
-        // Формируем список сообщений: система + предыдущие сообщения + текущее
-        val messages = buildList(messages.size + 1) {
-            add(systemMessage)
-            addAll(messages)
-        }
+            logger.d("Отправка сообщения: \"${lastMessageContent.take(50)}${if (lastMessageContent.length > 50) "..." else ""}\"")
 
-        // Создаем запрос
-        val request = LLMChatRequest(
-            model = providerSettings.model,
-            messages = messages,
-            temperature = promptSettings.temperature,
-            maxTokens = promptSettings.maxTokens,
-            apiKey = providerSettings.apiKey,
-            apiUrl = providerSettings.apiUrl,
-            openAIProject = providerSettings.openaiProject
-        )
+            // Получаем настройки из репозиториев
+            val llmConfig = llmConfigRepository.getSettings()
+            val providerSettings = providerSettingsRepository.getSettings()
 
-        try {
+            // Получаем эффективный системный промпт
+            val systemMessage = getEffectiveSystemPrompt()
+
+            // Формируем список сообщений: система + предыдущие сообщения + текущее
+            val messages = buildList(messages.size + 1) {
+                add(systemMessage)
+                addAll(messages)
+            }
+
+            // Создаем запрос
+            val request = LLMChatRequestDTO(
+                model = providerSettings.model,
+                messages = messages.map { message ->
+                    ChatMessageDTO(
+                        role = message.role.key,
+                        content = message.content
+                    )
+                },
+                temperature = llmConfig.temperature,
+                maxTokens = llmConfig.maxTokens,
+                topK = llmConfig.topK,
+                topP = llmConfig.topP,
+                minP = llmConfig.minP,
+                topA = llmConfig.topA,
+                seed = llmConfig.seed,
+                apiKey = providerSettings.apiKey,
+                apiUrl = providerSettings.apiUrl,
+            )
+
             // Замеряем время начала запроса
             val startTime = System.currentTimeMillis()
-            
+
             // Отправляем запрос к API
             val completionResponse = openAIApi.sendRequest(request)
 
@@ -100,36 +106,42 @@ class LLMClientRepositoryImpl(
 
             if (messageContent.isNullOrBlank()) {
                 logger.e("Пустой ответ от API")
-                return Result.failure(LLMExceptionFactory.createEmptyResponse())
+                throw Exception("Empty api response")
             }
 
             logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
 
             // Создаём объект метрик из ответа API
-            val metrics = completionResponse.usage?.let {
-                RequestMetrics(
-                    responseTime = responseTime,
-                    tokensInput = it.promptTokens,
-                    tokensOutput = it.completionTokens,
-                    tokensTotal = it.totalTokens
+            val metrics = completionResponse.usage?.let { usageDto ->
+                LLMUsage(
+                    promptTokens = usageDto.promptTokens,
+                    completionTokens = usageDto.completionTokens,
+                    totalTokens = usageDto.totalTokens,
+                    responseTimeMs = responseTime
                 )
             }
 
-            // Парсим ответ в соответствии с выбранным форматом
-            val parsedResult = ResponseParser.parseResponse(messageContent, promptSettings.responseFormat)
-            
             // Добавляем метрики к результату
-            return parsedResult.map { parsed ->
-                parsed.copy(metrics = metrics)
-            }
-        } catch (e: LLMException) {
-            // Если это уже LLMException, просто вернём её в Result
-            logger.e("LLM ошибка: ${e.getFullErrorInfo()}")
-            return Result.failure(e)
-        } catch (e: Exception) {
-            // Если произошла ошибка при выполнении запроса или парсинге ответа
-            logger.e("Ошибка при выполнении запроса или парсинге ответа", e)
-            return Result.failure(LLMExceptionFactory.createGenericError(e.message ?: "Неизвестная ошибка"))
+            LLMResponse(
+                id = completionResponse.id,
+                choices = completionResponse.choices.map { choiceDto ->
+                    LLMChoice(
+                        index = choiceDto.index,
+                        rawMessage = choiceDto.message.let { messageDto ->
+                            LLMMessage(
+                                role = MessageRole.getRole(messageDto.role),
+                                content = messageDto.content
+                            )
+                        },
+                        parsedMessage = resultParser.parse(
+                            choiceDto.message.content to llmConfig.responseFormat
+                        ).getOrThrow(),
+                        finishReason = choiceDto.finishReason
+                    )
+                },
+                format = llmConfig.responseFormat,
+                usage = metrics
+            )
         }
     }
 }

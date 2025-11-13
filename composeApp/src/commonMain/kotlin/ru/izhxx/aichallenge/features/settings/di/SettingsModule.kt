@@ -9,7 +9,7 @@ val settingsModule = module {
     viewModel {
         SettingsViewModel(
             providerSettingsStore = get(),
-            promptSettingsStore = get(),
+            lLMConfigRepository = get(),
         )
     }
 }
