@@ -31,6 +31,7 @@ val chatModule: Module = module {
             compressDialogHistoryUseCase = get(),
             llmConfigRepository = get(),
             metricsCacheRepository = get(),
+            dialogPersistenceRepository = get(),
             responseMapper = get()
         )
     }
