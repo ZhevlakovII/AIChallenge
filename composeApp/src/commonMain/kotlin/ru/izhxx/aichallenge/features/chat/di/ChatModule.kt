@@ -22,13 +22,15 @@ val chatModule: Module = module {
     // UseCase
     factoryOf(::SendMessageUseCaseImpl) bind SendMessageUseCase::class
     factoryOf(::CheckApiKeyConfigurationUseCaseImpl) bind CheckApiKeyConfigurationUseCase::class
-    
+
     // ViewModel
     viewModel { 
         ChatViewModel(
             sendMessageUseCase = get(),
             checkApiKeyConfigurationUseCase = get(),
+            compressDialogHistoryUseCase = get(),
             llmConfigRepository = get(),
+            metricsCacheRepository = get(),
             responseMapper = get()
         )
     }

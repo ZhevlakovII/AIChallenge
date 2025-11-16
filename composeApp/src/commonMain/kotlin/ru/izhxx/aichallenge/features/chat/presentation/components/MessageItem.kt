@@ -12,6 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import ru.izhxx.aichallenge.features.chat.presentation.components.SelectableText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -142,7 +143,7 @@ private fun ContentRenderer(
     Box(modifier = modifier) {
         when (content) {
             is MessageContent.Plain -> {
-                Text(text = content.text)
+                SelectableText(text = content.text)
             }
 
             is MessageContent.Markdown -> {
