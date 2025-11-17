@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.features.chat.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -9,10 +10,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import ru.izhxx.aichallenge.common.Logger
 import ru.izhxx.aichallenge.domain.model.ChatMetrics
 import ru.izhxx.aichallenge.domain.model.MessageRole
 import ru.izhxx.aichallenge.domain.model.error.DomainException
 import ru.izhxx.aichallenge.domain.model.message.LLMMessage
+import ru.izhxx.aichallenge.domain.repository.DialogPersistenceRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.MetricsCacheRepository
 import ru.izhxx.aichallenge.domain.usecase.CompressDialogHistoryUseCase
@@ -22,6 +26,7 @@ import ru.izhxx.aichallenge.features.chat.presentation.mapper.ChatResponseMapper
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatEvent
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiMessage
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiState
+import ru.izhxx.aichallenge.features.chat.presentation.model.MessageContent
 import java.util.UUID
 
 /**
@@ -33,11 +38,21 @@ class ChatViewModel(
     private val compressDialogHistoryUseCase: CompressDialogHistoryUseCase,
     private val llmConfigRepository: LLMConfigRepository,
     private val metricsCacheRepository: MetricsCacheRepository,
+    private val dialogPersistenceRepository: DialogPersistenceRepository,
     private val responseMapper: ChatResponseMapper
 ) : ViewModel() {
 
+    // Для логирования
+    private val logger = Logger.forClass(this)
+
     // Текущая суммаризация истории диалога
     private var currentSummary: String? = null
+
+    // ID текущего диалога
+    private var currentDialogId: String? = null
+    
+    // Счетчик сообщений в истории для текущего диалога
+    private var currentMessageCounter = 0
 
     // Состояние UI
     private val _state = MutableStateFlow(ChatUiState())
@@ -54,7 +69,7 @@ class ChatViewModel(
     private val messageHistory = MutableStateFlow<MutableList<LLMMessage>>(mutableListOf())
 
     init {
-        // Инициализация: добавляем приветственное сообщение и проверяем настройки
+        // Инициализация: создаем или восстанавливаем диалог, добавляем приветственное сообщение и проверяем настройки
         viewModelScope.launch {
             // Добавляем приветственное сообщение
             val welcomeMessage = responseMapper.createTechnicalUiMessage(
@@ -62,8 +77,130 @@ class ChatViewModel(
             )
             addUiMessage(welcomeMessage)
 
+            // Создаем новый диалог или восстанавливаем последний
+            initializeOrRestoreDialog()
+
             // Проверяем наличие API ключа
             refreshApiKeyConfiguration()
+        }
+    }
+
+    /**
+     * Инициализирует новый диалог или восстанавливает существующий
+     */
+    private suspend fun initializeOrRestoreDialog() {
+        try {
+            // Проверяем наличие сохраненных диалогов
+            val dialogs = dialogPersistenceRepository.getAllDialogs()
+
+            if (dialogs.isNotEmpty()) {
+                // Берем самый последний диалог (сортировка уже выполнена в репозитории)
+                val lastDialog = dialogs.first()
+                currentDialogId = lastDialog.id
+
+                logger.d("Восстановление диалога: $currentDialogId")
+
+                // Восстанавливаем контекстные сообщения для LLM
+                val contextMessages =
+                    dialogPersistenceRepository.getContextMessages(currentDialogId!!)
+
+                // Обновляем историю сообщений для LLM
+                messageHistory.update {
+                    it.apply {
+                        clear()
+                        addAll(contextMessages)
+                    }
+                }
+
+                // Восстанавливаем суммаризацию
+                currentSummary = dialogPersistenceRepository.getLatestSummary(currentDialogId!!)
+
+                logger.d("Восстановлен диалог: $currentDialogId с ${contextMessages.size} сообщениями контекста")
+
+                // Восстанавливаем полную историю для UI
+                val historyMessages =
+                    dialogPersistenceRepository.getHistoryMessages(currentDialogId!!)
+
+                // Преобразуем сохраненные сообщения в UI-модели и обновляем UI
+                if (historyMessages.isNotEmpty()) {
+                    val uiMessages = historyMessages.map { message ->
+                        when (message.role) {
+                            MessageRole.USER -> responseMapper.createUserUiMessage(
+                                message.content,
+                                false, // нет ошибок для восстановленных сообщений
+                                UUID.randomUUID().toString()
+                            )
+
+                            MessageRole.ASSISTANT -> ChatUiMessage.AssistantMessage(
+                                id = UUID.randomUUID().toString(),
+                                content = MessageContent.Plain(message.content),
+                                metadata = null // у восстановленных сообщений нет метаданных
+                            )
+
+                            else -> responseMapper.createTechnicalUiMessage(message.content)
+                        }
+                    }
+
+                    // Обновляем состояние UI
+                    _state.update { it.copy(messages = it.messages.plus(uiMessages)) }
+
+                    logger.d("Восстановлено ${uiMessages.size} UI-сообщений из истории")
+                    
+                    // Инициализируем счетчик сообщений для текущего диалога
+                    currentMessageCounter = historyMessages.size
+                    logger.d("Инициализирован счетчик сообщений: $currentMessageCounter")
+                }
+            } else {
+                // Если нет сохраненных диалогов, создаем новый
+                currentDialogId = dialogPersistenceRepository.createNewDialog()
+                logger.d("Создан новый диалог: $currentDialogId")
+            }
+        } catch (e: Exception) {
+            // В случае ошибки создаем новый диалог и продолжаем работу
+            logger.e("Ошибка при инициализации диалога", e)
+            currentDialogId = UUID.randomUUID().toString()
+        }
+    }
+
+    /**
+     * Сохраняет одно сообщение в историю и контекст
+     * Использует отдельный счетчик для порядка сообщений, который увеличивается последовательно
+     * для каждого нового сообщения в рамках диалога
+     */
+    private suspend fun saveSingleMessage(
+        message: LLMMessage,
+        promptTokens: Int? = null,
+        completionTokens: Int? = null,
+        totalTokens: Int? = null,
+        responseTimeMs: Long? = null
+    ) {
+        withContext(Dispatchers.IO) {
+            // Увеличиваем счетчик для текущего сообщения
+            currentMessageCounter++
+
+            currentDialogId?.let { dialogId ->
+                try {
+                    val title =
+                        messageHistory.value.firstOrNull { it.role == MessageRole.USER }?.content?.take(
+                            50
+                        ) ?: "Диалог"
+
+                    dialogPersistenceRepository.saveMessage(
+                        dialogId = dialogId,
+                        title = title,
+                        message = message,
+                        orderInDialog = currentMessageCounter,  // Используем счетчик для порядка
+                        promptTokens = promptTokens,
+                        completionTokens = completionTokens,
+                        totalTokens = totalTokens,
+                        responseTimeMs = responseTimeMs
+                    )
+
+                    logger.d("Сохранено сообщение в диалог $dialogId, порядок: $currentMessageCounter")
+                } catch (e: Exception) {
+                    logger.e("Ошибка при сохранении сообщения", e)
+                }
+            }
         }
     }
 
@@ -143,11 +280,17 @@ class ChatViewModel(
             role = MessageRole.USER,
             content = text
         )
+
         messageHistory.update {
             it.apply {
                 add(userLlmMessage)
             }
         }
+
+        // Сохраняем сообщение пользователя
+        saveSingleMessage(
+            message = userLlmMessage
+        )
 
         // Устанавливаем состояние загрузки и очищаем ошибки
         _state.update {
@@ -185,11 +328,21 @@ class ChatViewModel(
                         role = MessageRole.ASSISTANT,
                         content = response.choices.firstOrNull()?.rawMessage?.content.orEmpty()
                     )
+
                     messageHistory.update {
                         it.apply {
                             add(assistantLlmMessage)
                         }
                     }
+
+                    // Сохраняем сообщение ассистента с метриками
+                    saveSingleMessage(
+                        message = assistantLlmMessage,
+                        promptTokens = response.usage?.promptTokens,
+                        completionTokens = response.usage?.completionTokens,
+                        totalTokens = response.usage?.totalTokens,
+                        responseTimeMs = response.usage?.responseTimeMs
+                    )
 
                     // Сжимаем историю после добавления ответа ассистента
                     // Создаем копию списка для безопасной обработки
@@ -199,7 +352,8 @@ class ChatViewModel(
                     val originalHistorySize = historySnapshot.size
 
                     // Используем копию для сжатия и передаем текущую суммаризацию для инкрементальной суммаризации
-                    val compressionResult = compressDialogHistoryUseCase(historySnapshot, currentSummary)
+                    val compressionResult =
+                        compressDialogHistoryUseCase(historySnapshot, currentSummary)
                     val newSummary = compressionResult.first
                     val compressedMessages = compressionResult.second
                     val summaryMetrics = compressionResult.third
@@ -216,7 +370,24 @@ class ChatViewModel(
                         // Обновляем текущую суммаризацию
                         currentSummary = newSummary
 
-                        // Обновляем историю сообщений
+                        // Сохраняем суммаризацию с метриками
+                        currentDialogId?.let { dialogId ->
+                            // Удаляем все сообщения для контекста из БД
+                            logger.d("Удаляем все сообщения для контекста после суммаризации")
+                            dialogPersistenceRepository.clearContextMessages(dialogId)
+                            logger.d("Сохранение суммаризации после сжатия: $dialogId")
+
+                            // Сохраняем суммаризацию с метриками
+                            currentSummary?.let { summary ->
+                                dialogPersistenceRepository.saveSummary(
+                                    dialogId,
+                                    summary,
+                                    summaryMetrics
+                                )
+                            }
+                        }
+
+                        // Обновляем историю сообщений в памяти
                         messageHistory.update {
                             it.apply {
                                 clear()
@@ -322,7 +493,8 @@ class ChatViewModel(
                     messageHistory.update {
                         it.apply {
                             // Сохраняем сообщения до индекса включительно, удаляем остальные
-                            val keepMessages = subList(0, lastUserMessageIndex + 1).toMutableList()
+                            val keepMessages =
+                                subList(0, lastUserMessageIndex + 1).toMutableList()
                             clear()
                             addAll(keepMessages)
                         }
@@ -345,9 +517,9 @@ class ChatViewModel(
     }
 
     /**
-     * Очищает историю чата и добавляет приветственное сообщение
+     * Очищает историю чата, создает новый диалог и добавляет приветственное сообщение
      */
-    private suspend fun handleClearHistory() {
+    private fun handleClearHistory() {
         viewModelScope.launch {
             // Очищаем историю сообщений и суммаризацию
             messageHistory.update {
@@ -356,6 +528,19 @@ class ChatViewModel(
                 }
             }
             currentSummary = null
+            
+            // Сбрасываем счетчик сообщений
+            currentMessageCounter = 0
+            logger.d("Сброшен счетчик сообщений")
+
+            // Создаем новый диалог
+            try {
+                logger.d("Создание нового диалога после очистки истории")
+                currentDialogId = dialogPersistenceRepository.createNewDialog()
+            } catch (e: Exception) {
+                logger.e("Ошибка при создании нового диалога", e)
+                currentDialogId = UUID.randomUUID().toString()
+            }
 
             // Создаем приветственное сообщение
             val welcomeMessage = responseMapper.createTechnicalUiMessage(

@@ -7,9 +7,13 @@ import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 import ru.izhxx.aichallenge.data.api.OpenAIApi
 import ru.izhxx.aichallenge.data.api.OpenAIApiImpl
+import ru.izhxx.aichallenge.data.database.AppDatabase
+import ru.izhxx.aichallenge.data.database.DatabaseFactory
+import ru.izhxx.aichallenge.data.repository.DialogPersistenceRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.LLMClientRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.LLMConfigRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.ProviderSettingsRepositoryImpl
+import ru.izhxx.aichallenge.domain.repository.DialogPersistenceRepository
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
@@ -53,6 +57,15 @@ val sharedModule = module {
         ProviderSettingsRepositoryImpl(
             dataStore = DataStoreProvider.providePreferencesDataStore("llm_provider_settings.preferences_pb")
         )
+    }
+
+    single<AppDatabase> {
+        DatabaseFactory.getDatabase()
+    }
+
+    // DialogPersistenceRepository - репозиторий для работы с сохраненными диалогами
+    single<DialogPersistenceRepository> {
+        DialogPersistenceRepositoryImpl(get())
     }
 
     includes(
