@@ -19,13 +19,13 @@ kotlin {
 
     sourceSets {
         jvmMain.dependencies {
-            implementation(libs.ktor.clientJava)
+            implementation(libs.ktor.clientCio)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.androidx.datastore.preferences)
         }
 
         androidMain.dependencies {
-            implementation(libs.ktor.clientAndroid)
+            implementation(libs.ktor.clientOkhttp)
             implementation(libs.androidx.datastore.preferences)
         }
 
