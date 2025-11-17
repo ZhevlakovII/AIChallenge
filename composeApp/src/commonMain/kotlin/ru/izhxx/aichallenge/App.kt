@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import ru.izhxx.aichallenge.features.metrics.ChatMetricsScreen
 import ru.izhxx.aichallenge.features.chat.presentation.ChatScreen
 import ru.izhxx.aichallenge.features.settings.SettingsScreen
+import ru.izhxx.aichallenge.features.mcp.presentation.McpScreen
 
 /**
  * Главные экраны приложения
@@ -31,6 +32,7 @@ sealed class Screen(val route: String) {
     object Chat : Screen("chat")
     object Settings : Screen("settings")
     object Metrics : Screen("metrics")
+    object Mcp : Screen("mcp")
 }
 
 /**
@@ -53,6 +55,11 @@ val bottomNavItems = listOf(
         route = Screen.Metrics.route,
         title = "Метрики",
         icon = "📊"
+    ),
+    BottomNavItem(
+        route = Screen.Mcp.route,
+        title = "MCP",
+        icon = "🛠️"
     ),
     BottomNavItem(
         route = Screen.Settings.route,
@@ -133,6 +140,11 @@ fun App() {
                     // Экран метрик
                     composable(Screen.Metrics.route) {
                         ChatMetricsScreen()
+                    }
+
+                    // Экран MCP (список инструментов)
+                    composable(Screen.Mcp.route) {
+                        McpScreen()
                     }
 
                     // Экран настроек

@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.di
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
@@ -17,6 +18,7 @@ import ru.izhxx.aichallenge.domain.repository.DialogPersistenceRepository
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
+import ru.izhxx.aichallenge.di.mcpSharedModule
 
 val sharedModule = module {
     single<Json> {
@@ -30,6 +32,7 @@ val sharedModule = module {
             install(ContentNegotiation) {
                 json(get())
             }
+            install(WebSockets)
         }
     }
     // OpenAIApi - интерфейс для работы с OpenAI API
@@ -71,6 +74,7 @@ val sharedModule = module {
     includes(
         parsersModule,
         compressionModule,
-        metricsModule
+        metricsModule,
+        mcpSharedModule
     )
 }
