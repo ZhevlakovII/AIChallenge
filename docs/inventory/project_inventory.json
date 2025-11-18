@@ -1,0 +1,336 @@
+{
+  "project": "AIChallenge",
+  "version": "0.1.0",
+  "generatedAt": "2025-11-17T13:51:00Z",
+  "modules": [
+    {
+      "name": "composeApp",
+      "path": "composeApp",
+      "type": "ui",
+      "kmpSourceSets": [
+        "composeApp/src/commonMain/kotlin",
+        "composeApp/src/androidMain/kotlin",
+        "composeApp/src/jvmMain/kotlin",
+        "composeApp/src/commonMain/composeResources",
+        "composeApp/src/androidMain/res"
+      ],
+      "notes": "UI на Compose Multiplatform, навигация, ViewModels, MVI."
+    },
+    {
+      "name": "shared",
+      "path": "shared",
+      "type": "shared",
+      "kmpSourceSets": [
+        "shared/src/commonMain/kotlin",
+        "shared/src/androidMain/kotlin",
+        "shared/src/jvmMain/kotlin",
+        "shared/src/commonTest/kotlin"
+      ],
+      "notes": "Общие слои Domain и Data, общие DI и утилиты. Реализация API/репозиториев/БД."
+    },
+    {
+      "name": "server",
+      "path": "server",
+      "type": "server",
+      "kmpSourceSets": [
+        "server/src/main/kotlin",
+        "server/src/test/kotlin"
+      ],
+      "notes": "Ktor-сервер (опционально)."
+    }
+  ],
+  "features": [
+    {
+      "name": "chat",
+      "basePath": "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat",
+      "layers": {
+        "di": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/di/ChatModule.kt"
+        ],
+        "domain": {
+          "usecases": [
+            "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/domain/usecase/CheckApiKeyConfigurationUseCase.kt",
+            "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/domain/usecase/CheckApiKeyConfigurationUseCaseImpl.kt",
+            "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/domain/usecase/SendMessageUseCase.kt",
+            "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/domain/usecase/SendMessageUseCaseImpl.kt"
+          ]
+        },
+        "presentation": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/ChatScreen.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/ChatViewModel.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/components/ErrorBanner.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/components/LoadingIndicator.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/components/MarkdownRenderer.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/components/MessageItem.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/components/SelectableText.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/components/StructuredContentRenderer.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/mapper/ChatResponseMapper.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/model/ChatEvent.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/model/ChatUiMessage.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/model/ChatUiState.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/model/MessageContent.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/presentation/model/MessageMetadata.kt"
+        ],
+        "data": []
+      }
+    },
+    {
+      "name": "settings",
+      "basePath": "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/settings",
+      "layers": {
+        "di": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/settings/di/SettingsModule.kt"
+        ],
+        "presentation": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/settings/SettingsScreen.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/settings/SettingsViewModel.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/settings/state/SettingsState.kt"
+        ],
+        "domain": [],
+        "data": []
+      }
+    },
+    {
+      "name": "metrics",
+      "basePath": "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/metrics",
+      "layers": {
+        "presentation": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/metrics/ChatMetricsScreen.kt"
+        ],
+        "di": [],
+        "domain": [],
+        "data": []
+      }
+    },
+    {
+      "name": "mcp",
+      "basePath": "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp",
+      "layers": {
+        "di": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp/di/McpModule.kt"
+        ],
+        "presentation": [
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp/presentation/McpScreen.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp/presentation/McpViewModel.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp/presentation/McpEvent.kt",
+          "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp/presentation/McpState.kt"
+        ],
+        "domain": [],
+        "data": []
+      }
+    },
+    {
+      "name": "history",
+      "basePath": "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/history",
+      "layers": {
+        "di": [],
+        "presentation": [],
+        "domain": [],
+        "data": []
+      },
+      "status": "scaffolded (see plan.md)"
+    }
+  ],
+  "shared": {
+    "common": [
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/common/Constants.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/common/Logger.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/common/SafeApiCall.kt"
+    ],
+    "data": {
+      "api": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/api/OpenAIApi.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/api/OpenAIApiImpl.kt"
+      ],
+      "database": {
+        "core": [
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/AppDatabase.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/DatabaseFactory.kt"
+        ],
+        "dao": [
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/dao/ChatHistoryDao.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/dao/DialogDao.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/dao/MessageDao.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/dao/SummaryDao.kt"
+        ],
+        "entity": [
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/entity/ChatHistoryEntity.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/entity/DialogEntity.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/entity/MessageEntity.kt",
+          "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/database/entity/SummaryEntity.kt"
+        ]
+      },
+      "error": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/error/ApiError.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/error/RequestError.kt"
+      ],
+      "model": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/ChatMessageDTO.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/ChoiceDTO.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/LLMChatRequestDTO.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/LLMChatResponseDTO.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/UsageDTO.kt"
+      ],
+      "parser": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/LLMContentJsonModel.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/core/Parser.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/core/JsonParser.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/core/MarkdownParser.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/core/ResultParser.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/impl/JsonParserImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/impl/MarkdownParserImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/parser/impl/ResultParserImpl.kt"
+      ],
+      "repository": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/DialogPersistenceRepositoryImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/DialogSummaryRepositoryImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/LLMClientRepositoryImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/LLMConfigRepositoryImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/MetricsCacheRepositoryImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/ProviderSettingsRepositoryImpl.kt"
+      ],
+      "service": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/service/DialogHistoryCompressionServiceImpl.kt"
+      ],
+      "usecase": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/usecase/CompressDialogHistoryUseCaseImpl.kt"
+      ]
+    },
+    "di": [
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/CompressionModule.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/DataStoreProvider.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/McpModule.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/MetricsModule.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/ParsersModule.kt",
+      "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/SharedModule.kt"
+    ],
+    "domain": {
+      "model": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/ChatMetrics.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/DialogInfo.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/MessageRole.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/config/FormatSystemPrompts.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/config/LLMConfig.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/config/LLMDefaults.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/config/ProviderSettings.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/config/ResponseFormat.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/error/DomainException.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/markdown/InlineElement.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/markdown/MarkdownNode.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/message/LLMMessage.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/message/ParsedMessage.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/response/LLMChoice.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/response/LLMResponse.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/response/LLMUsage.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/summary/DialogSummaryMetrics.kt"
+      ],
+      "repositoryContracts": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/DialogPersistenceRepository.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/DialogSummaryRepository.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/LLMClientRepository.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/LLMConfigRepository.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/MetricsCacheRepository.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/ProviderSettingsRepository.kt"
+      ],
+      "serviceContracts": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/service/DialogHistoryCompressionService.kt"
+      ],
+      "usecases": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/usecase/CompressDialogHistoryUseCase.kt"
+      ]
+    },
+    "mcp": {
+      "domain": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/domain/model/McpTool.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/domain/repository/McpRepository.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/domain/usecase/GetMcpToolsUseCase.kt"
+      ],
+      "data": [
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/McpRepositoryImpl.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/model/McpToolDTO.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/model/ToolsListResult.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/rpc/RpcModels.kt",
+        "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/transport/McpWebSocketClient.kt"
+      ]
+    }
+  },
+  "server": {
+    "entry": "server/src/main/kotlin/ru/izhxx/aichallenge/Application.kt",
+    "resources": [
+      "server/src/main/resources/logback.xml"
+    ],
+    "tests": [
+      "server/src/test/kotlin/ru/izhxx/aichallenge/ApplicationTest.kt"
+    ]
+  },
+  "diModules": [
+    "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/chat/di/ChatModule.kt",
+    "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/settings/di/SettingsModule.kt",
+    "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/features/mcp/di/McpModule.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/CompressionModule.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/DataStoreProvider.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/McpModule.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/MetricsModule.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/ParsersModule.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/di/SharedModule.kt"
+  ],
+  "apis": [
+    {
+      "name": "OpenAIApi",
+      "interface": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/api/OpenAIApi.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/api/OpenAIApiImpl.kt"
+    }
+  ],
+  "repositories": [
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/DialogPersistenceRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/DialogPersistenceRepositoryImpl.kt"
+    },
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/DialogSummaryRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/DialogSummaryRepositoryImpl.kt"
+    },
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/LLMClientRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/LLMClientRepositoryImpl.kt"
+    },
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/LLMConfigRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/LLMConfigRepositoryImpl.kt"
+    },
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/MetricsCacheRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/MetricsCacheRepositoryImpl.kt"
+    },
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/repository/ProviderSettingsRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/repository/ProviderSettingsRepositoryImpl.kt"
+    },
+    {
+      "contract": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/domain/repository/McpRepository.kt",
+      "implementation": "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/McpRepositoryImpl.kt"
+    }
+  ],
+  "errorModels": [
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/error/RequestError.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/error/ApiError.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/domain/model/error/DomainException.kt"
+  ],
+  "dtoModels": [
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/ChatMessageDTO.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/ChoiceDTO.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/LLMChatRequestDTO.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/LLMChatResponseDTO.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/data/model/UsageDTO.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/model/McpToolDTO.kt",
+    "shared/src/commonMain/kotlin/ru/izhxx/aichallenge/mcp/data/model/ToolsListResult.kt"
+  ],
+  "navigation": {
+    "appEntry": "composeApp/src/commonMain/kotlin/ru/izhxx/aichallenge/App.kt",
+    "notes": "NavHost и маршруты экранов определяются в App.kt."
+  },
+  "rulesReference": [
+    "AIChallenge-StyleGuide.md",
+    ".clinerules/Project-rules.md"
+  ]
+}
