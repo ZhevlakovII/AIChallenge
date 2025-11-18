@@ -270,6 +270,7 @@ class LLMClientRepositoryImpl(
         for (tc in toolCalls) {
             val name = tc.function.name
             val argsStr = tc.function.arguments
+            val startTs = System.currentTimeMillis()
             val content = when (name) {
                 "github.list_user_repos" -> {
                     safeCall(name) {
@@ -316,6 +317,8 @@ class LLMClientRepositoryImpl(
                     }
                 }
             }
+            val elapsedMs = System.currentTimeMillis() - startTs
+            logger.i("Tool-calling: $name finished in ${elapsedMs} ms")
             results += ChatMessageDTO(
                 role = "tool",
                 content = content,

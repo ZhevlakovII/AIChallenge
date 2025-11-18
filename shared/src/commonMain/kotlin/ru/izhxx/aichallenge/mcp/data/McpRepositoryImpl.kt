@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
 import ru.izhxx.aichallenge.common.Logger
+import ru.izhxx.aichallenge.common.safeApiCall
 import ru.izhxx.aichallenge.data.model.github.RepoDTO
 import ru.izhxx.aichallenge.data.model.github.toDomain
 import ru.izhxx.aichallenge.domain.model.github.Repo
@@ -28,7 +29,9 @@ class McpRepositoryImpl(
     private val logger = Logger("MCP-Repo")
 
     override suspend fun listTools(wsUrl: String): Result<List<McpTool>> {
-        return transport.listTools(wsUrl).map { result ->
+        return safeApiCall(logger) {
+            transport.listTools(wsUrl).getOrThrow()
+        }.map { result ->
             result.tools.map { dto ->
                 McpTool(
                     name = dto.name,
@@ -46,7 +49,9 @@ class McpRepositoryImpl(
         name: String,
         arguments: JsonElement
     ): Result<JsonElement> {
-        return transport.callTool(wsUrl, name, arguments)
+        return safeApiCall(logger) {
+            transport.callTool(wsUrl, name, arguments).getOrThrow()
+        }
     }
 
     override suspend fun callListUserRepos(
@@ -55,16 +60,18 @@ class McpRepositoryImpl(
         perPage: Int,
         sort: String
     ): Result<List<Repo>> {
-        val args: JsonElement = json.parseToJsonElement(
-            """
-            {
-              "username": ${json.encodeToString(username)},
-              "per_page": $perPage,
-              "sort": ${json.encodeToString(sort)}
-            }
-            """.trimIndent()
-        )
-        return transport.callTool(wsUrl, "github.list_user_repos", args).mapCatching { resultEl ->
+        return safeApiCall(logger) {
+            val args: JsonElement = json.parseToJsonElement(
+                """
+                {
+                  "username": ${json.encodeToString(username)},
+                  "per_page": $perPage,
+                  "sort": ${json.encodeToString(sort)}
+                }
+                """.trimIndent()
+            )
+            transport.callTool(wsUrl, "github.list_user_repos", args).getOrThrow()
+        }.map { resultEl ->
             decodeRepos(resultEl)
         }
     }
@@ -75,16 +82,18 @@ class McpRepositoryImpl(
         sort: String,
         visibility: String
     ): Result<List<Repo>> {
-        val args: JsonElement = json.parseToJsonElement(
-            """
-            {
-              "per_page": $perPage,
-              "sort": ${json.encodeToString(sort)},
-              "visibility": ${json.encodeToString(visibility)}
-            }
-            """.trimIndent()
-        )
-        return transport.callTool(wsUrl, "github.list_my_repos", args).mapCatching { resultEl ->
+        return safeApiCall(logger) {
+            val args: JsonElement = json.parseToJsonElement(
+                """
+                {
+                  "per_page": $perPage,
+                  "sort": ${json.encodeToString(sort)},
+                  "visibility": ${json.encodeToString(visibility)}
+                }
+                """.trimIndent()
+            )
+            transport.callTool(wsUrl, "github.list_my_repos", args).getOrThrow()
+        }.map { resultEl ->
             decodeRepos(resultEl)
         }
     }
