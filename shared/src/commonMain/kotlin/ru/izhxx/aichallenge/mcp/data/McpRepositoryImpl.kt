@@ -41,6 +41,14 @@ class McpRepositoryImpl(
         }
     }
 
+    override suspend fun callTool(
+        wsUrl: String,
+        name: String,
+        arguments: JsonElement
+    ): Result<JsonElement> {
+        return transport.callTool(wsUrl, name, arguments)
+    }
+
     override suspend fun callListUserRepos(
         wsUrl: String,
         username: String,

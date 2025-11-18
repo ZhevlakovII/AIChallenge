@@ -24,6 +24,8 @@ import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.serialization.json.Json
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
@@ -124,103 +126,103 @@ fun Application.module() {
                         """.trimIndent()
                     )
                 ),
-//                McpToolDTO(
-//                    name = "sum",
-//                    description = "Сумма двух чисел",
-//                    inputSchema = json.parseToJsonElement(
-//                        """
-//                        {
-//                          "type": "object",
-//                          "title": "Sum two numbers",
-//                          "description": "Calculate the sum of two numbers.",
-//                          "properties": {
-//                            "a": {
-//                              "type": "number",
-//                              "description": "First addend."
-//                            },
-//                            "b": {
-//                              "type": "number",
-//                              "description": "Second addend."
-//                            }
-//                          },
-//                          "required": ["a","b"],
-//                          "additionalProperties": false
-//                        }
-//                        """.trimIndent()
-//                    )
-//                ),
-//                // GitHub: публичные репозитории пользователя
-//                McpToolDTO(
-//                    name = "github.list_user_repos",
-//                    description = "Список публичных репозиториев указанного пользователя GitHub",
-//                    inputSchema = json.parseToJsonElement(
-//                        """
-//                        {
-//                          "type": "object",
-//                          "title": "List public repositories of a GitHub user",
-//                          "description": "Fetch a paginated list of public repositories for the given GitHub username.",
-//                          "properties": {
-//                            "username": {
-//                              "type": "string",
-//                              "minLength": 1,
-//                              "description": "GitHub username whose public repositories will be listed."
-//                            },
-//                            "per_page": {
-//                              "type": "integer",
-//                              "minimum": 1,
-//                              "maximum": 100,
-//                              "default": 20,
-//                              "description": "Number of repositories to return per page (1-100)."
-//                            },
-//                            "sort": {
-//                              "type": "string",
-//                              "enum": ["created","updated","pushed","full_name"],
-//                              "default": "updated",
-//                              "description": "Sorting criteria for repositories."
-//                            }
-//                          },
-//                          "required": ["username"],
-//                          "additionalProperties": false
-//                        }
-//                        """.trimIndent()
-//                    )
-//                ),
-//                // GitHub: репозитории аутентифицированного пользователя (требуется GITHUB_TOKEN)
-//                McpToolDTO(
-//                    name = "github.list_my_repos",
-//                    description = "Список репозиториев аутентифицированного пользователя GitHub (при наличии GITHUB_TOKEN на сервере)",
-//                    inputSchema = json.parseToJsonElement(
-//                        """
-//                        {
-//                          "type": "object",
-//                          "title": "List repositories of the authenticated user",
-//                          "description": "Fetch a paginated list of repositories for the authenticated user using the configured token.",
-//                          "properties": {
-//                            "per_page": {
-//                              "type": "integer",
-//                              "minimum": 1,
-//                              "maximum": 100,
-//                              "default": 20,
-//                              "description": "Number of repositories to return per page (1-100)."
-//                            },
-//                            "sort": {
-//                              "type": "string",
-//                              "enum": ["created","updated","pushed","full_name"],
-//                              "default": "updated",
-//                              "description": "Sorting criteria for repositories."
-//                            },
-//                            "visibility": {
-//                              "type": "string",
-//                              "enum": ["all","public","private"],
-//                              "default": "all",
-//                              "description": "Visibility filter for repositories."
-//                            }
-//                          },
-//                          "additionalProperties": false
-//                        }
-//                        """.trimIndent()
-//                    )
-//                )
+                McpToolDTO(
+                    name = "sum",
+                    description = "Сумма двух чисел",
+                    inputSchema = json.parseToJsonElement(
+                        """
+                        {
+                          "type": "object",
+                          "title": "Sum two numbers",
+                          "description": "Calculate the sum of two numbers.",
+                          "properties": {
+                            "a": {
+                              "type": "number",
+                              "description": "First addend."
+                            },
+                            "b": {
+                              "type": "number",
+                              "description": "Second addend."
+                            }
+                          },
+                          "required": ["a","b"],
+                          "additionalProperties": false
+                        }
+                        """.trimIndent()
+                    )
+                ),
+                // GitHub: публичные репозитории пользователя
+                McpToolDTO(
+                    name = "github.list_user_repos",
+                    description = "Список публичных репозиториев указанного пользователя GitHub",
+                    inputSchema = json.parseToJsonElement(
+                        """
+                        {
+                          "type": "object",
+                          "title": "List public repositories of a GitHub user",
+                          "description": "Fetch a paginated list of public repositories for the given GitHub username.",
+                          "properties": {
+                            "username": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "GitHub username whose public repositories will be listed."
+                            },
+                            "per_page": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 100,
+                              "default": 20,
+                              "description": "Number of repositories to return per page (1-100)."
+                            },
+                            "sort": {
+                              "type": "string",
+                              "enum": ["created","updated","pushed","full_name"],
+                              "default": "updated",
+                              "description": "Sorting criteria for repositories."
+                            }
+                          },
+                          "required": ["username"],
+                          "additionalProperties": false
+                        }
+                        """.trimIndent()
+                    )
+                ),
+                // GitHub: репозитории аутентифицированного пользователя (требуется GITHUB_TOKEN)
+                McpToolDTO(
+                    name = "github.list_my_repos",
+                    description = "Список репозиториев аутентифицированного пользователя GitHub (при наличии GITHUB_TOKEN на сервере)",
+                    inputSchema = json.parseToJsonElement(
+                        """
+                        {
+                          "type": "object",
+                          "title": "List repositories of the authenticated user",
+                          "description": "Fetch a paginated list of repositories for the authenticated user using the configured token.",
+                          "properties": {
+                            "per_page": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 100,
+                              "default": 20,
+                              "description": "Number of repositories to return per page (1-100)."
+                            },
+                            "sort": {
+                              "type": "string",
+                              "enum": ["created","updated","pushed","full_name"],
+                              "default": "updated",
+                              "description": "Sorting criteria for repositories."
+                            },
+                            "visibility": {
+                              "type": "string",
+                              "enum": ["all","public","private"],
+                              "default": "all",
+                              "description": "Visibility filter for repositories."
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                        """.trimIndent()
+                    )
+                )
             )
 
             // Основной цикл чтения JSON-RPC сообщений
@@ -354,6 +356,58 @@ fun Application.module() {
                                             val body = runCatching { response.bodyAsText() }.getOrDefault("")
                                             respondError(response.status.value, "GitHub API error (${response.status.value}): $body")
                                         }
+                                    }
+                                }
+                                "health_check" -> {
+                                    val resultEl = buildJsonObject {
+                                        put("status", kotlinx.serialization.json.JsonPrimitive("ok"))
+                                    }
+                                    val resp = RpcResponse(id = req.id, result = resultEl)
+                                    val out = json.encodeToString(resp)
+                                    logger.d("=> $out")
+                                    send(Frame.Text(out))
+                                }
+                                "get_time" -> {
+                                    val now = Instant.now()
+                                    val iso = DateTimeFormatter.ISO_INSTANT.format(now)
+                                    val resultEl = buildJsonObject {
+                                        put("iso", kotlinx.serialization.json.JsonPrimitive(iso))
+                                    }
+                                    val resp = RpcResponse(id = req.id, result = resultEl)
+                                    val out = json.encodeToString(resp)
+                                    logger.d("=> $out")
+                                    send(Frame.Text(out))
+                                }
+                                "echo" -> {
+                                    val text = args?.get("text")?.jsonPrimitive?.content
+                                    if (text == null) {
+                                        respondError(-32602, "Invalid params: 'text' is required")
+                                    } else {
+                                        val resultEl = buildJsonObject {
+                                            put("text", kotlinx.serialization.json.JsonPrimitive(text))
+                                            put("length", kotlinx.serialization.json.JsonPrimitive(text.length))
+                                        }
+                                        val resp = RpcResponse(id = req.id, result = resultEl)
+                                        val out = json.encodeToString(resp)
+                                        logger.d("=> $out")
+                                        send(Frame.Text(out))
+                                    }
+                                }
+                                "sum" -> {
+                                    val aStr = args?.get("a")?.jsonPrimitive?.content
+                                    val bStr = args?.get("b")?.jsonPrimitive?.content
+                                    val a = aStr?.toDoubleOrNull()
+                                    val b = bStr?.toDoubleOrNull()
+                                    if (a == null || b == null) {
+                                        respondError(-32602, "Invalid params: 'a' and 'b' numbers are required")
+                                    } else {
+                                        val resultEl = buildJsonObject {
+                                            put("result", kotlinx.serialization.json.JsonPrimitive(a + b))
+                                        }
+                                        val resp = RpcResponse(id = req.id, result = resultEl)
+                                        val out = json.encodeToString(resp)
+                                        logger.d("=> $out")
+                                        send(Frame.Text(out))
                                     }
                                 }
                                 else -> {

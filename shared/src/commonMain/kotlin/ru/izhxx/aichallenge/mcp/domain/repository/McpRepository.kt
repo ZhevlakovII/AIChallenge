@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.mcp.domain.repository
 
 import ru.izhxx.aichallenge.domain.model.github.Repo
 import ru.izhxx.aichallenge.mcp.domain.model.McpTool
+import kotlinx.serialization.json.JsonElement
 
 /**
  * Репозиторий для взаимодействия с MCP-сервером.
@@ -13,6 +14,19 @@ interface McpRepository {
      * @param wsUrl WebSocket URL MCP сервера (например, ws://localhost:3000/mcp)
      */
     suspend fun listTools(wsUrl: String): Result<List<McpTool>>
+
+    /**
+     * Универсальный вызов MCP-инструмента по имени.
+     *
+     * @param wsUrl WebSocket URL MCP сервера
+     * @param name имя инструмента
+     * @param arguments аргументы инструмента в формате JSON
+     */
+    suspend fun callTool(
+        wsUrl: String,
+        name: String,
+        arguments: JsonElement
+    ): Result<JsonElement>
 
     /**
      * Вызывает инструмент github.list_user_repos на MCP-сервере.

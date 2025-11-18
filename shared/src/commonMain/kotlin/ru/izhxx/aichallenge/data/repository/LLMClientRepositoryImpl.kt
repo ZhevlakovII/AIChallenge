@@ -303,8 +303,17 @@ class LLMClientRepositoryImpl(
                     }
                 }
                 else -> {
-                    logger.i("Неизвестный инструмент: $name")
-                    buildErrorResult("unknown tool: $name")
+                    safeCall(name) {
+                        val args = runCatching { json.parseToJsonElement(argsStr) }.getOrNull()
+                            ?: return@safeCall buildErrorResult("invalid arguments json")
+                        mcpRepository
+                            .callTool(wsUrl, name, args)
+                            .mapCatching { resultEl -> json.encodeToString(resultEl) }
+                            .getOrElse { e ->
+                                logger.e("Ошибка MCP $name", e)
+                                buildErrorResult("mcp error: ${e.message}")
+                            }
+                    }
                 }
             }
             results += ChatMessageDTO(
