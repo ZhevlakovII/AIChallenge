@@ -9,6 +9,7 @@ import ru.izhxx.aichallenge.data.repository.McpConfigRepositoryImpl
 import ru.izhxx.aichallenge.domain.repository.McpConfigRepository
 import ru.izhxx.aichallenge.mcp.data.McpRepositoryImpl
 import ru.izhxx.aichallenge.mcp.data.transport.McpWebSocketClient
+import ru.izhxx.aichallenge.mcp.data.McpToLlmToolsMapper
 import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
 import ru.izhxx.aichallenge.mcp.domain.usecase.EnsureMcpConnectedUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetGithubUserReposUseCase
@@ -24,6 +25,9 @@ import ru.izhxx.aichallenge.mcp.domain.usecase.SaveMcpUrlUseCase
 val mcpSharedModule: Module = module {
     // Transport
     single { McpWebSocketClient(httpClient = get(), json = get()) }
+
+    // Mapper (MCP tools -> LLM tools schema)
+    singleOf(::McpToLlmToolsMapper)
 
     // Config repository (DataStore-backed)
     singleOf(::McpConfigRepositoryImpl) bind McpConfigRepository::class

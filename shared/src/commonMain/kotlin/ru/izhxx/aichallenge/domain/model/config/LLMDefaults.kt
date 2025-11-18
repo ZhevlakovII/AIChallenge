@@ -50,4 +50,9 @@ object LLMDefaults {
      * Обеспечивает воспроизводимость результатов
      */
     const val DEFAULT_SEED = 0L
+
+    /**
+     * Фича-флаг: включить поддержку function calling и MCP-инструментов по умолчанию
+     */
+    const val DEFAULT_ENABLE_MCP_TOOL_CALLING = false
 }

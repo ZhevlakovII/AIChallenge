@@ -57,7 +57,11 @@ data class LLMConfig(
      * Seed для генератора случайных чисел
      * Обеспечивает воспроизводимость результатов
      */
-    val seed: Long
+    val seed: Long,
+    /**
+     * Фича-флаг: включить поддержку function calling и MCP-инструментов.
+     */
+    val enableMcpToolCalling: Boolean = LLMDefaults.DEFAULT_ENABLE_MCP_TOOL_CALLING
 ) {
     companion object {
         /**
@@ -72,7 +76,8 @@ data class LLMConfig(
             topP = LLMDefaults.DEFAULT_TOP_P,
             minP = LLMDefaults.DEFAULT_MIN_P,
             topA = LLMDefaults.DEFAULT_TOP_A,
-            seed = LLMDefaults.DEFAULT_SEED
+            seed = LLMDefaults.DEFAULT_SEED,
+            enableMcpToolCalling = LLMDefaults.DEFAULT_ENABLE_MCP_TOOL_CALLING
         )
     }
 }

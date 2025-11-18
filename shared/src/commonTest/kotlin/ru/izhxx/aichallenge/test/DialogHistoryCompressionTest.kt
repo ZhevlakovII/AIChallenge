@@ -16,6 +16,11 @@ import ru.izhxx.aichallenge.domain.model.response.LLMUsage
 import ru.izhxx.aichallenge.domain.repository.DialogSummaryRepository
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
+import ru.izhxx.aichallenge.domain.model.config.LLMConfig
+import ru.izhxx.aichallenge.domain.model.config.ResponseFormat
+import ru.izhxx.aichallenge.domain.model.message.ParsedMessage
 
 /**
  * Тесты для механизма сжатия истории диалога
@@ -29,18 +34,34 @@ class DialogHistoryCompressionTest {
         var lastMessages: List<LLMMessage> = emptyList()
         var tokenCount: Int = 0
         
-        override suspend fun createSummary(messages: List<LLMMessage>): Result<String> {
+        override suspend fun createSummary(
+            messages: List<LLMMessage>,
+            previousSummary: String?
+        ): Result<Pair<String, DialogSummaryMetrics>> {
             lastMessages = messages
-            
+
             // Подсчитываем токены (примерно 1 токен на 4 символа)
             var totalChars = 0
             messages.forEach { message ->
                 totalChars += message.content.length
             }
+            if (previousSummary != null) {
+                totalChars += previousSummary.length
+            }
             tokenCount = totalChars / 4
-            
-            // Возвращаем моковую суммаризацию
-            return Result.success("Это суммаризация разговора: пользователь обсуждал Android разработку.")
+
+            val completionTokens = 50
+            val metrics = DialogSummaryMetrics(
+                promptTokens = tokenCount,
+                completionTokens = completionTokens,
+                totalTokens = tokenCount + completionTokens,
+                responseTimeMs = 100
+            )
+
+            // Возвращаем моковую суммаризацию с метриками
+            return Result.success(
+                "Это суммаризация разговора: пользователь обсуждал Android разработку." to metrics
+            )
         }
     }
     
@@ -86,11 +107,11 @@ class DialogHistoryCompressionTest {
                                 role = MessageRole.ASSISTANT,
                                 content = responseContent
                             ),
-                            parsedMessage = responseContent,
+                            parsedMessage = ParsedMessage.Plain(responseContent),
                             finishReason = "stop"
                         )
                     ),
-                    format = "text",
+                    format = ResponseFormat.MARKDOWN,
                     usage = LLMUsage(
                         promptTokens = tokenCount,
                         completionTokens = 50,
@@ -106,20 +127,18 @@ class DialogHistoryCompressionTest {
      * Моковый репозиторий настроек LLM
      */
     class MockLLMConfigRepository : LLMConfigRepository {
-        override suspend fun getSettings() = object {
-            val systemPrompt = "Ты полезный помощник"
-            val responseFormat = "text"
-            val temperature = 1.0f
-            val maxTokens = 2048
-            val topK = 0
-            val topP = 0.0f
-            val minP = 0.0f
-            val topA = 0.0f
-            val seed = 0L
+        private val state = MutableStateFlow(LLMConfig.default())
+
+        override val settingsFlow: Flow<LLMConfig> = state
+
+        override suspend fun getSettings(): LLMConfig = state.value
+
+        override suspend fun saveSettings(config: LLMConfig) {
+            state.value = config
         }
-        
-        override suspend fun updateSettings(update: suspend (Any) -> Any): Result<Unit> {
-            return Result.success(Unit)
+
+        override suspend fun backToDefaultSettings() {
+            state.value = LLMConfig.default()
         }
     }
     
@@ -128,7 +147,7 @@ class DialogHistoryCompressionTest {
         // Подготовка
         val mockDialogSummaryRepository = MockDialogSummaryRepository()
         val mockLLMConfigRepository = MockLLMConfigRepository()
-        val service = DialogHistoryCompressionServiceImpl(mockDialogSummaryRepository, mockLLMConfigRepository)
+        val service = DialogHistoryCompressionServiceImpl(mockDialogSummaryRepository)
         val useCase = CompressDialogHistoryUseCaseImpl(service)
         
         // Создаем историю диалога меньше порога (4 сообщения)
@@ -152,7 +171,7 @@ class DialogHistoryCompressionTest {
         // Подготовка
         val mockDialogSummaryRepository = MockDialogSummaryRepository()
         val mockLLMConfigRepository = MockLLMConfigRepository()
-        val service = DialogHistoryCompressionServiceImpl(mockDialogSummaryRepository, mockLLMConfigRepository)
+        val service = DialogHistoryCompressionServiceImpl(mockDialogSummaryRepository)
         val useCase = CompressDialogHistoryUseCaseImpl(service)
         
         // Создаем историю диалога больше порога (6 сообщений)
@@ -186,7 +205,7 @@ class DialogHistoryCompressionTest {
         val mockLLMRepository = MockLLMClientRepository()
         val mockDialogSummaryRepository = MockDialogSummaryRepository()
         val mockLLMConfigRepository = MockLLMConfigRepository()
-        val service = DialogHistoryCompressionServiceImpl(mockDialogSummaryRepository, mockLLMConfigRepository)
+        val service = DialogHistoryCompressionServiceImpl(mockDialogSummaryRepository)
         val useCase = CompressDialogHistoryUseCaseImpl(service)
         
         // Создаем длинную историю диалога (10 сообщений)

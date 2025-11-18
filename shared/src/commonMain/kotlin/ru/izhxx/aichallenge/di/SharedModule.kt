@@ -46,7 +46,11 @@ val sharedModule = module {
             openAIApi = get(),
             llmConfigRepository = get(),
             providerSettingsRepository = get(),
-            resultParser = get()
+            resultParser = get(),
+            mcpRepository = get(),
+            mcpConfigRepository = get(),
+            toolsMapper = get(),
+            json = get()
         )
     }
 

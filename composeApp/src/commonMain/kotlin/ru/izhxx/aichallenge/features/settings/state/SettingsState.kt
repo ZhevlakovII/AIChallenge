@@ -23,7 +23,9 @@ data class SettingsState(
     val minP: String = "0.05",
     val topA: String = "0.0",
     val seed: String = "0",
-
+    // Фича-флаг: включить function calling (MCP tools)
+    val enableMcpToolCalling: Boolean = false,
+    
     // Состояние UI
     val isLoading: Boolean = true,
     val isSaved: Boolean = false,

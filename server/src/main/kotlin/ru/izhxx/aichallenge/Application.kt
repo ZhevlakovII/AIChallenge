@@ -110,65 +110,117 @@ fun Application.module() {
                         """
                         {
                           "type": "object",
+                          "title": "Echo input",
+                          "description": "Echo back the provided text.",
                           "properties": {
-                            "text": { "type": "string" }
+                            "text": {
+                              "type": "string",
+                              "description": "Text to echo back."
+                            }
                           },
-                          "required": ["text"]
+                          "required": ["text"],
+                          "additionalProperties": false
                         }
                         """.trimIndent()
                     )
                 ),
-                McpToolDTO(
-                    name = "sum",
-                    description = "Сумма двух чисел",
-                    inputSchema = json.parseToJsonElement(
-                        """
-                        {
-                          "type": "object",
-                          "properties": {
-                            "a": { "type": "number" },
-                            "b": { "type": "number" }
-                          },
-                          "required": ["a","b"]
-                        }
-                        """.trimIndent()
-                    )
-                ),
-                // GitHub: публичные репозитории пользователя
-                McpToolDTO(
-                    name = "github.list_user_repos",
-                    description = "Список публичных репозиториев указанного пользователя GitHub",
-                    inputSchema = json.parseToJsonElement(
-                        """
-                        {
-                          "type": "object",
-                          "properties": {
-                            "username": { "type": "string" },
-                            "per_page": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
-                            "sort": { "type": "string", "enum": ["created","updated","pushed","full_name"], "default": "updated" }
-                          },
-                          "required": ["username"]
-                        }
-                        """.trimIndent()
-                    )
-                ),
-                // GitHub: репозитории аутентифицированного пользователя (требуется GITHUB_TOKEN)
-                McpToolDTO(
-                    name = "github.list_my_repos",
-                    description = "Список репозиториев аутентифицированного пользователя GitHub (при наличии GITHUB_TOKEN на сервере)",
-                    inputSchema = json.parseToJsonElement(
-                        """
-                        {
-                          "type": "object",
-                          "properties": {
-                            "per_page": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
-                            "sort": { "type": "string", "enum": ["created","updated","pushed","full_name"], "default": "updated" },
-                            "visibility": { "type": "string", "enum": ["all","public","private"], "default": "all" }
-                          }
-                        }
-                        """.trimIndent()
-                    )
-                )
+//                McpToolDTO(
+//                    name = "sum",
+//                    description = "Сумма двух чисел",
+//                    inputSchema = json.parseToJsonElement(
+//                        """
+//                        {
+//                          "type": "object",
+//                          "title": "Sum two numbers",
+//                          "description": "Calculate the sum of two numbers.",
+//                          "properties": {
+//                            "a": {
+//                              "type": "number",
+//                              "description": "First addend."
+//                            },
+//                            "b": {
+//                              "type": "number",
+//                              "description": "Second addend."
+//                            }
+//                          },
+//                          "required": ["a","b"],
+//                          "additionalProperties": false
+//                        }
+//                        """.trimIndent()
+//                    )
+//                ),
+//                // GitHub: публичные репозитории пользователя
+//                McpToolDTO(
+//                    name = "github.list_user_repos",
+//                    description = "Список публичных репозиториев указанного пользователя GitHub",
+//                    inputSchema = json.parseToJsonElement(
+//                        """
+//                        {
+//                          "type": "object",
+//                          "title": "List public repositories of a GitHub user",
+//                          "description": "Fetch a paginated list of public repositories for the given GitHub username.",
+//                          "properties": {
+//                            "username": {
+//                              "type": "string",
+//                              "minLength": 1,
+//                              "description": "GitHub username whose public repositories will be listed."
+//                            },
+//                            "per_page": {
+//                              "type": "integer",
+//                              "minimum": 1,
+//                              "maximum": 100,
+//                              "default": 20,
+//                              "description": "Number of repositories to return per page (1-100)."
+//                            },
+//                            "sort": {
+//                              "type": "string",
+//                              "enum": ["created","updated","pushed","full_name"],
+//                              "default": "updated",
+//                              "description": "Sorting criteria for repositories."
+//                            }
+//                          },
+//                          "required": ["username"],
+//                          "additionalProperties": false
+//                        }
+//                        """.trimIndent()
+//                    )
+//                ),
+//                // GitHub: репозитории аутентифицированного пользователя (требуется GITHUB_TOKEN)
+//                McpToolDTO(
+//                    name = "github.list_my_repos",
+//                    description = "Список репозиториев аутентифицированного пользователя GitHub (при наличии GITHUB_TOKEN на сервере)",
+//                    inputSchema = json.parseToJsonElement(
+//                        """
+//                        {
+//                          "type": "object",
+//                          "title": "List repositories of the authenticated user",
+//                          "description": "Fetch a paginated list of repositories for the authenticated user using the configured token.",
+//                          "properties": {
+//                            "per_page": {
+//                              "type": "integer",
+//                              "minimum": 1,
+//                              "maximum": 100,
+//                              "default": 20,
+//                              "description": "Number of repositories to return per page (1-100)."
+//                            },
+//                            "sort": {
+//                              "type": "string",
+//                              "enum": ["created","updated","pushed","full_name"],
+//                              "default": "updated",
+//                              "description": "Sorting criteria for repositories."
+//                            },
+//                            "visibility": {
+//                              "type": "string",
+//                              "enum": ["all","public","private"],
+//                              "default": "all",
+//                              "description": "Visibility filter for repositories."
+//                            }
+//                          },
+//                          "additionalProperties": false
+//                        }
+//                        """.trimIndent()
+//                    )
+//                )
             )
 
             // Основной цикл чтения JSON-RPC сообщений

@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -304,6 +305,40 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ============ ИСПОЛЬЗОВАНИЕ MCP TOOLS ============
+                Text(
+                    text = "MCP tools (function calling)",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Text(
+                    text = "Позволяет LLM вызывать инструменты через MCP (function calling). Требуется корректно настроенное MCP-подключение.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Использовать MCP tools",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = state.enableMcpToolCalling,
+                        onCheckedChange = { viewModel.updateEnableMcpToolCalling(it) },
+                        enabled = !state.isLoading
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
