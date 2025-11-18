@@ -12,7 +12,10 @@ import ru.izhxx.aichallenge.features.mcp.presentation.McpViewModel
 val mcpModule: Module = module {
     viewModel {
         McpViewModel(
-            getMcpTools = get()
+            getMcpTools = get(),
+            ensureConnected = get(),
+            getSavedUrl = get(),
+            saveUrl = get()
         )
     }
 }

@@ -9,6 +9,7 @@ import ru.izhxx.aichallenge.common.SERVER_PORT
 data class McpState(
     val url: String = "ws://127.0.0.1:$SERVER_PORT/mcp",
     val loading: Boolean = false,
+    val connected: Boolean = false,
     val tools: List<McpTool> = emptyList(),
     val error: String? = null
 )

@@ -16,10 +16,22 @@ application {
 dependencies {
     implementation(projects.shared)
     implementation(libs.logback)
+
+    // Ktor Server
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
     implementation(libs.ktor.serverWebsockets)
+
+    // JSON
     implementation(libs.kotlinx.serialization.json)
+
+    // Ktor Client for calling GitHub API from MCP tools
+    implementation(libs.ktor.clientCore)
+    implementation(libs.ktor.clientCio)
+    implementation(libs.ktor.clientContentNegotiation)
+    implementation(libs.ktor.serializationKotlinxJson)
+    implementation(libs.ktor.clientLogging)
+
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
 }
