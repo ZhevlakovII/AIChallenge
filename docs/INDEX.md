@@ -99,8 +99,9 @@ Templates (минимальные шаблоны):
   - Logging-Metrics: docs/human/Logging-Metrics.md
   - Security: docs/human/Security.md
   - TestingStrategy: docs/human/TestingStrategy.md
-  - Inventory: docs/inventory/project_inventory.json
-  - Maintenance (LLM): docs/llm/maintenance_rules.md
+- Inventory: docs/inventory/project_inventory.json
+- Maintenance (LLM): docs/llm/maintenance_rules.md
+- Диаграммы зависимостей (jdeps): docs/architecture/DEPENDENCY_GRAPH.md
 
 ## Поддержка и обновление документации
 
