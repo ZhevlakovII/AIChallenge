@@ -24,6 +24,9 @@ import ru.izhxx.aichallenge.features.reminder.presentation.model.ReminderEvent
 import ru.izhxx.aichallenge.features.reminder.presentation.model.ReminderResultUi
 import ru.izhxx.aichallenge.features.reminder.presentation.model.ReminderState
 import ru.izhxx.aichallenge.features.reminder.presentation.model.ReminderUi
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * ViewModel фичи Reminder (MVI).
@@ -227,8 +230,8 @@ class ReminderViewModel(
         periodUnit = periodUnit.toUi(),
         periodValue = periodValue,
         enabled = enabled,
-        lastRunAt = lastRunAt,
-        nextRunAt = nextRunAt
+        lastRunAt = lastRunAt?.let { formatDateTime(it) },
+        nextRunAt = nextRunAt?.let { formatDateTime(it) }
     )
 
     private fun ReminderPeriodUnit.toUi(): PeriodUi = when (this) {
@@ -247,11 +250,18 @@ class ReminderViewModel(
         ReminderResultUi(
             id = requireNotNull(id),
             taskId = taskId,
-            runAt = runAt,
+            runAt = formatDateTime(runAt),
             status = status.name,
             preview = if (responseText.isNotBlank()) responseText.take(200) else (errorMessage ?: ""),
             errorMessage = errorMessage
         )
+
+    private fun formatDateTime(epochMillis: Long): String {
+        val dt = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(TimeZone.currentSystemDefault())
+        return "${pad2(dt.dayOfMonth)}.${pad2(dt.monthNumber)}.${dt.year} ${pad2(dt.hour)}:${pad2(dt.minute)}"
+    }
+
+    private fun pad2(v: Int): String = v.toString().padStart(2, '0')
 
     // endregion
 }

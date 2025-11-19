@@ -11,8 +11,8 @@ data class ReminderUi(
     val periodUnit: PeriodUi,
     val periodValue: Int,
     val enabled: Boolean,
-    val lastRunAt: Long?,
-    val nextRunAt: Long?
+    val lastRunAt: String?,
+    val nextRunAt: String?
 )
 
 /**
@@ -21,7 +21,7 @@ data class ReminderUi(
 data class ReminderResultUi(
     val id: Long,
     val taskId: Long,
-    val runAt: Long,
+    val runAt: String,
     val status: String,
     val preview: String,
     val errorMessage: String?

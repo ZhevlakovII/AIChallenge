@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -90,7 +92,14 @@ fun ReminderScreen(
                     HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     TasksList(
                         tasks = state.tasks,
-                        onToggle = { id, enabled -> viewModel.processEvent(ReminderEvent.Toggle(id, enabled)) },
+                        onToggle = { id, enabled ->
+                            viewModel.processEvent(
+                                ReminderEvent.Toggle(
+                                    id,
+                                    enabled
+                                )
+                            )
+                        },
                         onEdit = { id -> viewModel.processEvent(ReminderEvent.OpenEdit(id)) },
                         onDelete = { id -> viewModel.processEvent(ReminderEvent.Delete(id)) },
                         onRunNow = { id -> viewModel.processEvent(ReminderEvent.RunNow(id)) },
@@ -172,7 +181,9 @@ private fun TasksList(
                         Text(task.name, style = MaterialTheme.typography.titleSmall)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Вкл.")
-                            Checkbox(checked = task.enabled, onCheckedChange = { onToggle(task.id, it) })
+                            Checkbox(
+                                checked = task.enabled,
+                                onCheckedChange = { onToggle(task.id, it) })
                         }
                     }
                     Spacer(Modifier.height(4.dp))
@@ -186,8 +197,10 @@ private fun TasksList(
                     }
                     if (task.lastRunAt != null || task.nextRunAt != null) {
                         Spacer(Modifier.height(4.dp))
-                        Text("Последний запуск: ${task.lastRunAt ?: "-"}; Следующий: ${task.nextRunAt ?: "-"}",
-                            style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "Последний запуск: ${task.lastRunAt ?: "-"}; Следующий: ${task.nextRunAt ?: "-"}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -207,7 +220,10 @@ private fun ResultsList(results: List<ReminderResultUi>) {
                     .padding(vertical = 6.dp)
             ) {
                 Column(Modifier.fillMaxWidth().padding(10.dp)) {
-                    Text("#${r.id} • ${r.status} • ${r.runAt}", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "#${r.id} • ${r.status} • ${r.runAt}",
+                        style = MaterialTheme.typography.titleSmall
+                    )
                     Spacer(Modifier.height(4.dp))
                     Text(r.preview.ifBlank { r.errorMessage ?: "" })
                 }
@@ -233,6 +249,7 @@ private fun EditorPanel(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)),
         contentAlignment = Alignment.Center
     ) {
@@ -241,8 +258,10 @@ private fun EditorPanel(
                 .fillMaxWidth(0.9f)
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                Text(if (editor.id == null) "Новая задача" else "Редактирование задачи #${editor.id}",
-                    style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (editor.id == null) "Новая задача" else "Редактирование задачи #${editor.id}",
+                    style = MaterialTheme.typography.titleMedium
+                )
 
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
@@ -251,20 +270,28 @@ private fun EditorPanel(
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = systemPrompt, onValueChange = { systemPrompt = it },
-                    label = { Text("System Prompt") }, modifier = Modifier.fillMaxWidth(), minLines = 3
+                    value = systemPrompt,
+                    onValueChange = { systemPrompt = it },
+                    label = { Text("System Prompt") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = userPrompt, onValueChange = { userPrompt = it },
-                    label = { Text("User Prompt") }, modifier = Modifier.fillMaxWidth(), minLines = 3
+                    value = userPrompt,
+                    onValueChange = { userPrompt = it },
+                    label = { Text("User Prompt") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
                 )
 
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = periodValue.toString(),
-                        onValueChange = { v -> periodValue = v.toLongOrNull()?.coerceAtLeast(1) ?: 1 },
+                        onValueChange = { v ->
+                            periodValue = v.toLongOrNull()?.coerceAtLeast(1) ?: 1
+                        },
                         label = { Text("Период") },
                         modifier = Modifier.weight(1f)
                     )
@@ -311,7 +338,11 @@ private fun PeriodSelector(
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf(PeriodUi.MINUTES, PeriodUi.HOURS, PeriodUi.DAYS).forEach { v ->
-            Button(onClick = { onChange(v) }, enabled = value != v) {
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = { onChange(v) },
+                enabled = value != v
+            ) {
                 Text(v.name)
             }
         }
