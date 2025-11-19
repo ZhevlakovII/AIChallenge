@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,8 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -88,7 +87,7 @@ fun ReminderScreen(
             ) {
                 Column(Modifier.fillMaxSize().padding(12.dp)) {
                     Text("Задачи", style = MaterialTheme.typography.titleMedium)
-                    Divider(Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     TasksList(
                         tasks = state.tasks,
                         onToggle = { id, enabled -> viewModel.processEvent(ReminderEvent.Toggle(id, enabled)) },
@@ -111,7 +110,7 @@ fun ReminderScreen(
             ) {
                 Column(Modifier.fillMaxSize().padding(12.dp)) {
                     Text("Результаты", style = MaterialTheme.typography.titleMedium)
-                    Divider(Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     ResultsList(results = state.resultsForSelected)
                 }
             }
@@ -262,14 +261,14 @@ private fun EditorPanel(
                 )
 
                 Spacer(Modifier.height(8.dp))
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = periodValue.toString(),
                         onValueChange = { v -> periodValue = v.toLongOrNull()?.coerceAtLeast(1) ?: 1 },
                         label = { Text("Период") },
                         modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.height(8.dp).aspectRatio(0.01f))
+                    Spacer(Modifier.height(8.dp))
                     PeriodSelector(
                         value = periodUnit,
                         onChange = { periodUnit = it },
