@@ -24,4 +24,19 @@ interface LLMClientRepository {
         messages: List<LLMMessage>, 
         summary: String?
     ): Result<LLMResponse>
+    
+    /**
+     * Отправляет список сообщений с кастомным системным промптом (игнорируя глобальный из конфигурации).
+     * Используется для задач reminder, где system prompt задаётся на уровне задачи.
+     *
+     * @param systemPrompt системный промпт для текущего запроса
+     * @param messages список сообщений (обычно одно user-сообщение)
+     * @param summary суммаризация контекста (опционально)
+     * @return результат выполнения запроса с ответом LLM
+     */
+    suspend fun sendMessagesWithCustomSystem(
+        systemPrompt: String,
+        messages: List<LLMMessage>,
+        summary: String? = null
+    ): Result<LLMResponse>
 }

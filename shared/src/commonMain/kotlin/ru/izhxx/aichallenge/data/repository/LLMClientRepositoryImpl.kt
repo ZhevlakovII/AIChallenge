@@ -381,6 +381,149 @@ class LLMClientRepositoryImpl(
         return json.encodeToString(obj)
     }
 
+    /**
+     * Отправляет сообщения c кастомным системным промптом (обходит глобальный из настроек).
+     * Используется для задач reminder.
+     */
+    override suspend fun sendMessagesWithCustomSystem(
+        systemPrompt: String,
+        messages: List<LLMMessage>,
+        summary: String?
+    ): Result<LLMResponse> {
+        if (messages.isEmpty()) {
+            return Result.failure(IllegalStateException("Empty messages"))
+        }
+
+        return safeApiCall(logger) {
+            val lastMessageContent = messages.last().content
+            logger.d("Отправка (custom system) сообщения: \"${lastMessageContent.take(50)}${if (lastMessageContent.length > 50) "..." else ""}\"")
+
+            // Получаем настройки из репозиториев
+            val llmConfig = llmConfigRepository.getSettings()
+            val providerSettings = providerSettingsRepository.getSettings()
+
+            // Формируем системный промпт с учётом формата и (опционально) суммаризации
+            val basePrompt = """
+                $systemPrompt
+                ${FormatSystemPrompts.getFormatPrompt(llmConfig.responseFormat)}
+            """.trimIndent()
+            val finalPrompt = if (summary != null) {
+                """
+                $basePrompt
+
+                $summary
+                """.trimIndent()
+            } else {
+                basePrompt
+            }
+            val systemMessage = LLMMessage(
+                role = MessageRole.SYSTEM,
+                content = finalPrompt
+            )
+
+            // Готовим DTO-сообщения
+            val messagesDto = buildList {
+                add(ChatMessageDTO(role = MessageRole.SYSTEM.key, content = systemMessage.content))
+                addAll(messages.map { message ->
+                    ChatMessageDTO(
+                        role = message.role.key,
+                        content = message.content
+                    )
+                })
+            }.toMutableList()
+
+            // Подготавливаем LLM tools по фича-флагу и сохранённому MCP wsUrl
+            val (wsUrl, llmTools) = buildLlmToolsIfEnabled(llmConfig)
+
+            // Выполняем первый запрос (с tools, если есть)
+            var request = LLMChatRequestDTO(
+                model = providerSettings.model,
+                messages = messagesDto,
+                temperature = llmConfig.temperature,
+                maxTokens = llmConfig.maxTokens,
+                topK = llmConfig.topK,
+                topP = llmConfig.topP,
+                minP = llmConfig.minP,
+                topA = llmConfig.topA,
+                seed = llmConfig.seed,
+                tools = llmTools,
+                apiKey = providerSettings.apiKey,
+                apiUrl = providerSettings.apiUrl,
+            )
+
+            val startTime = System.currentTimeMillis()
+            var response: LLMChatResponseDTO = openAIApi.sendRequest(request)
+            var responseTime = System.currentTimeMillis() - startTime
+
+            // Обработка tool_calls
+            var rounds = 0
+            while (rounds < MAX_TOOL_ROUNDS) {
+                val assistantMsg = response.choices.firstOrNull()?.message
+                val toolCalls = assistantMsg?.toolCalls
+                if (assistantMsg == null || toolCalls.isNullOrEmpty()) break
+
+                messagesDto += assistantMsg
+
+                val toolResults = if (wsUrl != null) {
+                    handleToolCalls(wsUrl, toolCalls)
+                } else {
+                    toolCalls.map { tc ->
+                        ChatMessageDTO(
+                            role = "tool",
+                            content = buildErrorResult("MCP is not configured (wsUrl is null)"),
+                            toolCallId = tc.id
+                        )
+                    }
+                }
+
+                messagesDto.addAll(toolResults)
+
+                val startTimeRound = System.currentTimeMillis()
+                request = request.copy(messages = messagesDto)
+                response = openAIApi.sendRequest(request)
+                responseTime = System.currentTimeMillis() - startTimeRound
+                rounds++
+            }
+
+            val messageContent = response.choices.firstOrNull()?.message?.content
+            if (messageContent.isNullOrBlank()) {
+                logger.e("Пустой ответ от API после обработки tool_calls (custom system)")
+                throw Exception("Empty api response")
+            }
+            logger.d("Успешно получен ответ (custom system): \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
+
+            val metrics = response.usage?.let { usageDto ->
+                LLMUsage(
+                    promptTokens = usageDto.promptTokens,
+                    completionTokens = usageDto.completionTokens,
+                    totalTokens = usageDto.totalTokens,
+                    responseTimeMs = responseTime
+                )
+            }
+
+            LLMResponse(
+                id = response.id,
+                choices = response.choices.map { choiceDto ->
+                    LLMChoice(
+                        index = choiceDto.index,
+                        rawMessage = choiceDto.message.let { messageDto ->
+                            LLMMessage(
+                                role = MessageRole.getRole(messageDto.role),
+                                content = messageDto.content ?: ""
+                            )
+                        },
+                        parsedMessage = resultParser.parse(
+                            (choiceDto.message.content ?: "") to llmConfig.responseFormat
+                        ).getOrThrow(),
+                        finishReason = choiceDto.finishReason
+                    )
+                },
+                format = llmConfig.responseFormat,
+                usage = metrics
+            )
+        }
+    }
+
     // Расширение для безопасного парсинга Int
     private fun JsonPrimitive.intOrNull(): Int? = try {
         this.content.toInt()

@@ -24,6 +24,7 @@ import ru.izhxx.aichallenge.features.metrics.ChatMetricsScreen
 import ru.izhxx.aichallenge.features.chat.presentation.ChatScreen
 import ru.izhxx.aichallenge.features.settings.SettingsScreen
 import ru.izhxx.aichallenge.features.mcp.presentation.McpScreen
+import ru.izhxx.aichallenge.features.reminder.presentation.ReminderScreen
 
 /**
  * Главные экраны приложения
@@ -33,6 +34,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Metrics : Screen("metrics")
     object Mcp : Screen("mcp")
+    object Reminder : Screen("reminder")
 }
 
 /**
@@ -60,6 +62,11 @@ val bottomNavItems = listOf(
         route = Screen.Mcp.route,
         title = "MCP",
         icon = "🛠️"
+    ),
+    BottomNavItem(
+        route = Screen.Reminder.route,
+        title = "Напоминания",
+        icon = "⏰"
     ),
     BottomNavItem(
         route = Screen.Settings.route,
@@ -145,6 +152,11 @@ fun App() {
                     // Экран MCP (список инструментов)
                     composable(Screen.Mcp.route) {
                         McpScreen()
+                    }
+
+                    // Экран напоминаний
+                    composable(Screen.Reminder.route) {
+                        ReminderScreen()
                     }
 
                     // Экран настроек
