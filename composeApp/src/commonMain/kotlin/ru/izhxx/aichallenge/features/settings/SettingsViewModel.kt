@@ -52,6 +52,7 @@ class SettingsViewModel(
                         minP = lLMConfig.minP.toString(),
                         topA = lLMConfig.topA.toString(),
                         seed = lLMConfig.seed.toString(),
+                        enableMcpToolCalling = lLMConfig.enableMcpToolCalling,
                         isLoading = false
                     )
                 }
@@ -148,6 +149,13 @@ class SettingsViewModel(
      */
     fun updateSeed(seed: String) {
         _state.update { it.copy(seed = seed) }
+    }
+
+    /**
+     * Обновляет флаг использования MCP tools (function calling)
+     */
+    fun updateEnableMcpToolCalling(enabled: Boolean) {
+        _state.update { it.copy(enableMcpToolCalling = enabled) }
     }
 
     /**
@@ -275,7 +283,8 @@ class SettingsViewModel(
             topP = topPValue,
             minP = minPValue,
             topA = topAValue,
-            seed = seedValue
+            seed = seedValue,
+            enableMcpToolCalling = currentState.enableMcpToolCalling
         )
 
         viewModelScope.launch {
@@ -317,6 +326,7 @@ class SettingsViewModel(
                 minP = defaultLLMConfig.minP.toString(),
                 topA = defaultLLMConfig.topA.toString(),
                 seed = defaultLLMConfig.seed.toString(),
+                enableMcpToolCalling = defaultLLMConfig.enableMcpToolCalling,
                 error = null
             )
         }

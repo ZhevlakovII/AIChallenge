@@ -19,6 +19,7 @@ data class LLMChatRequestDTO(
     @SerialName("min_p") val minP: Double? = null,
     @SerialName("top_a") val topA: Double? = null,
     @SerialName("seed") val seed: Long? = null,
+    @SerialName("tools") val tools: List<LlmToolSchemaDTO>? = null,
     
     // Транзиентные поля, которые не включаются в сериализацию при отправке на сервер
     @Transient val apiKey: String = "",

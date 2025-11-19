@@ -89,14 +89,24 @@ internal class OpenAIApiImpl(
             throw RequestError(RequestError.RequestStage.PARSING, e)
         }
 
-        // Проверяем, что ответ содержит сообщение
-        val messageContent = completionResponse.choices.firstOrNull()?.message?.content
-        if (messageContent.isNullOrBlank()) {
-            logger.e("Пустой ответ от API")
+        // Проверяем, что ответ валиден:
+        // - допускаем content == null, если модель вернула tool_calls (finish_reason == "tool_calls" или есть message.tool_calls)
+        val firstChoice = completionResponse.choices.firstOrNull()
+        val finishReason = firstChoice?.finishReason
+        val toolCalls = firstChoice?.message?.toolCalls
+        val hasToolCalls = toolCalls != null && toolCalls.isNotEmpty()
+        val messageContent = firstChoice?.message?.content
+
+        if (messageContent.isNullOrBlank() && !hasToolCalls) {
+            logger.e("Пустой ответ от API (без tool_calls)")
             throw ApiError(200, "Пустой ответ от сервера")
         }
 
-        logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
+        if (!messageContent.isNullOrBlank()) {
+            logger.d("Успешно получен ответ: \"${messageContent.take(50)}${if (messageContent.length > 50) "..." else ""}\"")
+        } else if (hasToolCalls) {
+            logger.d("Получен ответ с tool_calls (${toolCalls?.size ?: 0}), finish_reason=$finishReason")
+        }
         logger.d("Использовано токенов: вход=${completionResponse.usage?.promptTokens}, выход=${completionResponse.usage?.completionTokens}, всего=${completionResponse.usage?.totalTokens}")
 
         // Возвращаем ответ, обеспечивая что usage не null

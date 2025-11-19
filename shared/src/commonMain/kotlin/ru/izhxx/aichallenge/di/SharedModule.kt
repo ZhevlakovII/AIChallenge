@@ -1,6 +1,8 @@
 package ru.izhxx.aichallenge.di
 
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.json.json
@@ -18,7 +20,6 @@ import ru.izhxx.aichallenge.domain.repository.DialogPersistenceRepository
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
-import ru.izhxx.aichallenge.di.mcpSharedModule
 
 val sharedModule = module {
     single<Json> {
@@ -33,6 +34,11 @@ val sharedModule = module {
                 json(get())
             }
             install(WebSockets)
+            install(HttpTimeout) {
+                connectTimeoutMillis = 15_000
+                socketTimeoutMillis = 120_000
+                requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+            }
         }
     }
     // OpenAIApi - интерфейс для работы с OpenAI API
@@ -46,7 +52,11 @@ val sharedModule = module {
             openAIApi = get(),
             llmConfigRepository = get(),
             providerSettingsRepository = get(),
-            resultParser = get()
+            resultParser = get(),
+            mcpRepository = get(),
+            mcpConfigRepository = get(),
+            toolsMapper = get(),
+            json = get()
         )
     }
 

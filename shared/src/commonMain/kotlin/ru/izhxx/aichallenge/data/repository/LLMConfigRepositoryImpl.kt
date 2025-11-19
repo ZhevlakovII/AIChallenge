@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -32,6 +33,7 @@ class LLMConfigRepositoryImpl(
             minP = preferences[minP] ?: defaultSettings.minP,
             topA = preferences[topA] ?: defaultSettings.topA,
             seed = preferences[seed] ?: defaultSettings.seed,
+            enableMcpToolCalling = preferences[enableMcpTools] ?: defaultSettings.enableMcpToolCalling,
         )
     }
 
@@ -45,6 +47,7 @@ class LLMConfigRepositoryImpl(
     private val minP = doublePreferencesKey("llm_promt_minp")
     private val topA = doublePreferencesKey("llm_promt_topa")
     private val seed = longPreferencesKey("llm_promt_seed")
+    private val enableMcpTools = booleanPreferencesKey("llm_prompt_enable_mcp_tools")
 
     /**
      * Получает настройки промпта LLM
@@ -69,6 +72,7 @@ class LLMConfigRepositoryImpl(
             preferences[minP] = config.minP
             preferences[topA] = config.topA
             preferences[seed] = config.seed
+            preferences[enableMcpTools] = config.enableMcpToolCalling
         }
     }
 
@@ -86,6 +90,7 @@ class LLMConfigRepositoryImpl(
             preferences.remove(minP)
             preferences.remove(topA)
             preferences.remove(seed)
+            preferences.remove(enableMcpTools)
         }
     }
 }

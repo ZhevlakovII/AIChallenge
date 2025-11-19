@@ -28,6 +28,11 @@ import ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiMessage
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiState
 import ru.izhxx.aichallenge.features.chat.presentation.model.MessageContent
 import java.util.UUID
+import ru.izhxx.aichallenge.mcp.domain.usecase.EnsureMcpConnectedUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetSavedMcpUrlUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetGithubUserReposUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetMyGithubReposUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpToolsUseCase
 
 /**
  * ViewModel для экрана чата с использованием паттерна MVI
@@ -39,7 +44,13 @@ class ChatViewModel(
     private val llmConfigRepository: LLMConfigRepository,
     private val metricsCacheRepository: MetricsCacheRepository,
     private val dialogPersistenceRepository: DialogPersistenceRepository,
-    private val responseMapper: ChatResponseMapper
+    private val responseMapper: ChatResponseMapper,
+    // MCP
+    private val ensureMcpConnectedUseCase: EnsureMcpConnectedUseCase,
+    private val getSavedMcpUrlUseCase: GetSavedMcpUrlUseCase,
+    private val getGithubUserReposUseCase: GetGithubUserReposUseCase,
+    private val getMyGithubReposUseCase: GetMyGithubReposUseCase,
+    private val getMcpToolsUseCase: GetMcpToolsUseCase
 ) : ViewModel() {
 
     // Для логирования
@@ -251,6 +262,9 @@ class ChatViewModel(
      */
     private suspend fun handleSendMessage(text: String) {
         if (text.isBlank() || state.value.isLoading) return
+
+        // Перехват MCP-команд (не зависит от LLM API ключа)
+        if (handleMcpCommand(text)) return
 
         // Обновляем состояние и проверяем настройки перед отправкой
         refreshApiKeyConfiguration()
@@ -471,6 +485,184 @@ class ChatViewModel(
                 "Произошла непредвиденная ошибка. Пожалуйста, используйте кнопку повтора на сообщении или отправьте запрос еще раз."
             )
             addUiMessage(retryMessage)
+        }
+    }
+
+    /**
+     * Обрабатывает MCP-команды:
+     * - "/repos <username>" — публичные репозитории пользователя GitHub
+     * - "/myrepos" — репозитории аутентифицированного пользователя
+     * - "/tools" — список доступных инструментов MCP
+     *
+     * Возвращает true, если команда обработана и дальнейшая LLM-отправка не требуется.
+     */
+    private suspend fun handleMcpCommand(text: String): Boolean {
+        val trimmed = text.trim()
+        val isRepos = trimmed.startsWith("/repos ")
+        val isMyRepos = trimmed == "/myrepos"
+        val isTools = trimmed == "/tools"
+
+        if (!isRepos && !isMyRepos && !isTools) return false
+
+        // Включаем индикатор загрузки
+        _state.update { it.copy(isLoading = true, error = null) }
+
+        // Получаем/используем сохранённый URL MCP
+        val wsUrl = try {
+            getSavedMcpUrlUseCase()
+        } catch (e: Exception) {
+            _state.update { it.copy(isLoading = false) }
+            val msg = responseMapper.createTechnicalUiMessage(
+                "MCP URL не настроен. Откройте экран MCP и сохраните адрес сервера."
+            )
+            addUiMessage(msg)
+            return true
+        }
+
+        // Проверяем соединение
+        val connected = ensureMcpConnectedUseCase(wsUrl).isSuccess
+        if (!connected) {
+            _state.update { it.copy(isLoading = false) }
+            val msg = responseMapper.createTechnicalUiMessage(
+                "Не удалось подключиться к MCP. Проверьте, что сервер запущен и URL корректен."
+            )
+            addUiMessage(msg)
+            return true
+        }
+
+        try {
+            when {
+                isRepos -> {
+                    val username = trimmed.removePrefix("/repos").trim()
+                    if (username.isBlank()) {
+                        val msg = responseMapper.createTechnicalUiMessage(
+                            "Использование: /repos <username>"
+                        )
+                        addUiMessage(msg)
+                        _state.update { it.copy(isLoading = false) }
+                        return true
+                    }
+                    val result = getGithubUserReposUseCase(wsUrl, username)
+                    result.fold(
+                        onSuccess = { repos ->
+                            val textOut = buildReposPlainList(repos, header = "Публичные репозитории $username:")
+                            addUiMessage(
+                                ChatUiMessage.AssistantMessage(
+                                    id = UUID.randomUUID().toString(),
+                                    content = MessageContent.Plain(textOut),
+                                    metadata = null
+                                )
+                            )
+                            _state.update { it.copy(isLoading = false) }
+                        },
+                        onFailure = { e ->
+                            val msg = responseMapper.createTechnicalUiMessage(
+                                "Ошибка при получении репозиториев: ${e.message ?: "неизвестная ошибка"}"
+                            )
+                            addUiMessage(msg)
+                            _state.update { it.copy(isLoading = false) }
+                        }
+                    )
+                }
+                isMyRepos -> {
+                    val result = getMyGithubReposUseCase(wsUrl)
+                    result.fold(
+                        onSuccess = { repos ->
+                            val textOut = buildReposPlainList(repos, header = "Мои репозитории:")
+                            addUiMessage(
+                                ChatUiMessage.AssistantMessage(
+                                    id = UUID.randomUUID().toString(),
+                                    content = MessageContent.Plain(textOut),
+                                    metadata = null
+                                )
+                            )
+                            _state.update { it.copy(isLoading = false) }
+                        },
+                        onFailure = { e ->
+                            val msg = responseMapper.createTechnicalUiMessage(
+                                "Ошибка при получении моих репозиториев: ${e.message ?: "неизвестная ошибка"}. " +
+                                        "Убедитесь, что на сервере задан GITHUB_TOKEN."
+                            )
+                            addUiMessage(msg)
+                            _state.update { it.copy(isLoading = false) }
+                        }
+                    )
+                }
+                isTools -> {
+                    val result = getMcpToolsUseCase(wsUrl)
+                    result.fold(
+                        onSuccess = { tools ->
+                            val listText = buildString {
+                                appendLine("Доступные инструменты MCP (${tools.size}):")
+                                tools.forEach { t ->
+                                    append("- ")
+                                    append(t.name)
+                                    t.description?.let {
+                                        append(" — ")
+                                        append(it)
+                                    }
+                                    appendLine()
+                                }
+                            }
+                            addUiMessage(
+                                ChatUiMessage.AssistantMessage(
+                                    id = UUID.randomUUID().toString(),
+                                    content = MessageContent.Plain(listText),
+                                    metadata = null
+                                )
+                            )
+                            _state.update { it.copy(isLoading = false) }
+                        },
+                        onFailure = { e ->
+                            val msg = responseMapper.createTechnicalUiMessage(
+                                "Ошибка при получении инструментов MCP: ${e.message ?: "неизвестная ошибка"}"
+                            )
+                            addUiMessage(msg)
+                            _state.update { it.copy(isLoading = false) }
+                        }
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            val msg = responseMapper.createTechnicalUiMessage(
+                "Ошибка обработки MCP-команды: ${e.message ?: "неизвестная ошибка"}"
+            )
+            addUiMessage(msg)
+            _state.update { it.copy(isLoading = false) }
+        }
+
+        return true
+    }
+
+    /**
+     * Формирует простой текстовый список репозиториев.
+     */
+    private fun buildReposPlainList(
+        repos: List<ru.izhxx.aichallenge.domain.model.github.Repo>,
+        header: String
+    ): String {
+        return buildString {
+            appendLine(header)
+            if (repos.isEmpty()) {
+                appendLine("Список пуст.")
+            } else {
+                repos.forEach { r ->
+                    append("- ")
+                    append(r.name)
+                    r.description?.let { desc ->
+                        if (desc.isNotBlank()) {
+                            append(" — ")
+                            append(desc.trim())
+                        }
+                    }
+                    append(" (⭐")
+                    append(r.stargazers)
+                    r.language?.let { append(", ").append(it) }
+                    append(") ")
+                    append(r.htmlUrl)
+                    appendLine()
+                }
+            }
         }
     }
 

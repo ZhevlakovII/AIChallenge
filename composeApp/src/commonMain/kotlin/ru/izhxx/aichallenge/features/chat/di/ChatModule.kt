@@ -32,7 +32,12 @@ val chatModule: Module = module {
             llmConfigRepository = get(),
             metricsCacheRepository = get(),
             dialogPersistenceRepository = get(),
-            responseMapper = get()
+            responseMapper = get(),
+            ensureMcpConnectedUseCase = get(),
+            getSavedMcpUrlUseCase = get(),
+            getGithubUserReposUseCase = get(),
+            getMyGithubReposUseCase = get(),
+            getMcpToolsUseCase = get()
         )
     }
 }

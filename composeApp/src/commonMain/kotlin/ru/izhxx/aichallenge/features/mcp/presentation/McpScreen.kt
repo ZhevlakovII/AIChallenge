@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.features.mcp.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,6 +55,34 @@ fun McpScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             enabled = !state.loading
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.onEvent(McpEvent.SaveUrl) },
+                enabled = !state.loading
+            ) {
+                Text("Сохранить URL")
+            }
+            Button(
+                onClick = { viewModel.onEvent(McpEvent.CheckConnection) },
+                enabled = !state.loading
+            ) {
+                Text("Проверить соединение")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (state.connected) "Статус: Подключено" else "Статус: Не подключено",
+            color = if (state.connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium
         )
 
         Spacer(modifier = Modifier.height(12.dp))
