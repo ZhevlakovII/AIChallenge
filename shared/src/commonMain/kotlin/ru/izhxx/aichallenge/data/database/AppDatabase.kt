@@ -10,6 +10,10 @@ import ru.izhxx.aichallenge.data.database.entity.ChatHistoryEntity
 import ru.izhxx.aichallenge.data.database.entity.DialogEntity
 import ru.izhxx.aichallenge.data.database.entity.MessageEntity
 import ru.izhxx.aichallenge.data.database.entity.SummaryEntity
+import ru.izhxx.aichallenge.data.database.dao.ReminderTaskDao
+import ru.izhxx.aichallenge.data.database.dao.ReminderResultDao
+import ru.izhxx.aichallenge.data.database.entity.ReminderTaskEntity
+import ru.izhxx.aichallenge.data.database.entity.ReminderResultEntity
 
 /**
  * Основной класс базы данных Room для приложения
@@ -19,9 +23,11 @@ import ru.izhxx.aichallenge.data.database.entity.SummaryEntity
         MessageEntity::class,
         ChatHistoryEntity::class,
         DialogEntity::class,
-        SummaryEntity::class
+        SummaryEntity::class,
+        ReminderTaskEntity::class,
+        ReminderResultEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,4 +51,14 @@ abstract class AppDatabase : RoomDatabase() {
      * Возвращает DAO для работы с историей чата
      */
     abstract fun chatHistoryDao(): ChatHistoryDao
+
+    /**
+     * Возвращает DAO для работы с задачами-напоминаниями
+     */
+    abstract fun reminderTaskDao(): ReminderTaskDao
+
+    /**
+     * Возвращает DAO для работы с результатами напоминаний
+     */
+    abstract fun reminderResultDao(): ReminderResultDao
 }

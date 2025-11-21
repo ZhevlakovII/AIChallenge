@@ -4,6 +4,7 @@ import org.koin.dsl.module
 import ru.izhxx.aichallenge.features.chat.di.chatModule
 import ru.izhxx.aichallenge.features.settings.di.settingsModule
 import ru.izhxx.aichallenge.features.mcp.di.mcpModule
+import ru.izhxx.aichallenge.features.reminder.di.reminderModule
 
 /**
  * Основной модуль приложения, объединяющий все остальные модули
@@ -14,6 +15,7 @@ val appModule = module {
             chatModule,
             settingsModule,
             mcpModule,
+            reminderModule,
             sharedModule
         )
     )

@@ -261,6 +261,15 @@
     ],
     "tests": [
       "server/src/test/kotlin/ru/izhxx/aichallenge/ApplicationTest.kt"
+    ],
+    "mcpTools": [
+      "health_check",
+      "get_time",
+      "get_rub_usd_rate",
+      "echo",
+      "sum",
+      "github.list_user_repos",
+      "github.list_my_repos"
     ]
   },
   "diModules": [

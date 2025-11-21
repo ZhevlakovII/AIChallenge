@@ -23,9 +23,6 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import java.time.Instant
-import java.time.format.DateTimeFormatter
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
@@ -42,6 +39,8 @@ import ru.izhxx.aichallenge.mcp.data.rpc.InitializeResult
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcError
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcRequest
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcResponse
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 /**
  * Точка входа Ktor-сервера и минимальная реализация MCP по WebSocket (JSON-RPC 2.0).
@@ -164,6 +163,11 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
         McpToolDTO(
             name = "get_time",
             description = "Текущее время",
+            inputSchema = null
+        ),
+        McpToolDTO(
+            name = "get_rub_usd_rate",
+            description = "Текущий курс RUB→USD по @fawazahmed0/currency-api (jsDelivr)",
             inputSchema = null
         ),
         McpToolDTO(
@@ -343,6 +347,7 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
     when (toolName) {
         "health_check" -> handleHealthCheck(req, json, logger)
         "get_time" -> handleGetTime(req, json, logger)
+        "get_rub_usd_rate" -> handleGetRubUsdRate(req, json, http, logger)
         "echo" -> handleEcho(req, json, args, logger)
         "sum" -> handleSum(req, json, args, logger)
         "github.list_user_repos" -> handleGithubListUserRepos(req, json, args, http, logger)
@@ -379,6 +384,47 @@ private suspend fun DefaultWebSocketServerSession.handleGetTime(
         put("iso", kotlinx.serialization.json.JsonPrimitive(iso))
     }
     respondResult(json, req.id, resultEl, logger)
+}
+
+/**
+ * Инструмент: get_rub_usd_rate — текущий курс RUB→USD по @fawazahmed0/currency-api (jsDelivr) + метаданные времени.
+ */
+private suspend fun DefaultWebSocketServerSession.handleGetRubUsdRate(
+    req: RpcRequest,
+    json: Json,
+    http: HttpClient,
+    logger: Logger
+) {
+    val url = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/rub.json"
+    val response: HttpResponse = http.get(url) {
+        header("Accept", "application/json")
+    }
+
+    if (response.status.isSuccess()) {
+        val body = response.bodyAsText()
+        val rootEl = runCatching { json.parseToJsonElement(body) }.getOrNull()
+        val rootObj = rootEl?.jsonObject
+        val rubObj = rootObj?.get("rub")?.jsonObject
+        val usdStr = rubObj?.get("usd")?.jsonPrimitive?.content
+        val usd = usdStr?.toDoubleOrNull()
+
+        if (usd != null) {
+            val fetchedAt = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
+            val resultEl = buildJsonObject {
+                put("base", kotlinx.serialization.json.JsonPrimitive("RUB"))
+                put("symbol", kotlinx.serialization.json.JsonPrimitive("USD"))
+                put("rate", kotlinx.serialization.json.JsonPrimitive(usd))
+                put("fetchedAt", kotlinx.serialization.json.JsonPrimitive(fetchedAt))
+                put("source", kotlinx.serialization.json.JsonPrimitive(url))
+            }
+            respondResult(json, req.id, resultEl, logger)
+        } else {
+            respondError(json, req.id, -32001, "Missing rub.usd rate in API response", logger)
+        }
+    } else {
+        val body = runCatching { response.bodyAsText() }.getOrDefault("")
+        respondError(json, req.id, response.status.value, "Currency API error (${response.status.value}): $body", logger)
+    }
 }
 
 /**

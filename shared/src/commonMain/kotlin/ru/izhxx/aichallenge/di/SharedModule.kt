@@ -16,10 +16,17 @@ import ru.izhxx.aichallenge.data.repository.DialogPersistenceRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.LLMClientRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.LLMConfigRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.ProviderSettingsRepositoryImpl
+import ru.izhxx.aichallenge.data.repository.ReminderRepositoryImpl
+import ru.izhxx.aichallenge.data.usecase.ExecuteReminderTaskUseCaseImpl
 import ru.izhxx.aichallenge.domain.repository.DialogPersistenceRepository
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
+import ru.izhxx.aichallenge.domain.repository.ReminderRepository
+import ru.izhxx.aichallenge.domain.service.NoopReminderNotifier
+import ru.izhxx.aichallenge.domain.service.ReminderEngine
+import ru.izhxx.aichallenge.domain.service.ReminderNotifier
+import ru.izhxx.aichallenge.domain.usecase.ExecuteReminderTaskUseCase
 
 val sharedModule = module {
     single<Json> {
@@ -80,6 +87,12 @@ val sharedModule = module {
     single<DialogPersistenceRepository> {
         DialogPersistenceRepositoryImpl(get())
     }
+
+    // Reminder: репозиторий, use case, notifier (по умолчанию no-op), движок
+    single<ReminderRepository> { ReminderRepositoryImpl(get()) }
+    single<ExecuteReminderTaskUseCase> { ExecuteReminderTaskUseCaseImpl(get()) }
+    single<ReminderNotifier> { NoopReminderNotifier() }
+    single { ReminderEngine(get(), get(), get(), maxParallelTasks = 3) }
 
     includes(
         parsersModule,

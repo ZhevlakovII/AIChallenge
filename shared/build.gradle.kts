@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -26,6 +25,7 @@ kotlin {
         }
 
         androidMain.dependencies {
+            implementation(libs.androidx.core.ktx)
             implementation(libs.ktor.clientOkhttp)
             implementation(libs.androidx.datastore.preferences)
         }
