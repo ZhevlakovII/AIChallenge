@@ -1,15 +1,10 @@
 package ru.izhxx.aichallenge.data.repository
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import ru.izhxx.aichallenge.common.Logger
@@ -24,11 +19,11 @@ import ru.izhxx.aichallenge.data.parser.core.ResultParser
 import ru.izhxx.aichallenge.domain.model.MessageRole
 import ru.izhxx.aichallenge.domain.model.config.FormatSystemPrompts
 import ru.izhxx.aichallenge.domain.model.config.LLMConfig
+import ru.izhxx.aichallenge.domain.model.github.Repo
 import ru.izhxx.aichallenge.domain.model.message.LLMMessage
 import ru.izhxx.aichallenge.domain.model.response.LLMChoice
 import ru.izhxx.aichallenge.domain.model.response.LLMResponse
 import ru.izhxx.aichallenge.domain.model.response.LLMUsage
-import ru.izhxx.aichallenge.domain.model.github.Repo
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.McpConfigRepository
@@ -61,7 +56,7 @@ class LLMClientRepositoryImpl(
         /**
          * Максимальное количество раундов обработки tool_calls.
          */
-        private const val MAX_TOOL_ROUNDS = 2
+        private const val MAX_TOOL_ROUNDS = 10
     }
 
     /**
