@@ -1,0 +1,13 @@
+# =============================================================================
+# .clineignore - Cline AI Assistant ignore patterns
+# =============================================================================
+# This file specifies files and directories that Cline should not read,
+# analyze, or modify during development assistance.
+#
+# Pattern format follows .gitignore syntax:
+# - Use # for comments
+# - Use / for directories
+# - Use * for wildcards
+# - Use ! to negate patterns
+# =============================================================================
+docs/
