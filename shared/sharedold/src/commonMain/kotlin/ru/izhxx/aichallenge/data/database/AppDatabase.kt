@@ -12,8 +12,10 @@ import ru.izhxx.aichallenge.data.database.entity.MessageEntity
 import ru.izhxx.aichallenge.data.database.entity.SummaryEntity
 import ru.izhxx.aichallenge.data.database.dao.ReminderTaskDao
 import ru.izhxx.aichallenge.data.database.dao.ReminderResultDao
+import ru.izhxx.aichallenge.data.database.dao.McpServerDao
 import ru.izhxx.aichallenge.data.database.entity.ReminderTaskEntity
 import ru.izhxx.aichallenge.data.database.entity.ReminderResultEntity
+import ru.izhxx.aichallenge.data.database.entity.McpServerEntity
 
 /**
  * Основной класс базы данных Room для приложения
@@ -25,9 +27,10 @@ import ru.izhxx.aichallenge.data.database.entity.ReminderResultEntity
         DialogEntity::class,
         SummaryEntity::class,
         ReminderTaskEntity::class,
-        ReminderResultEntity::class
+        ReminderResultEntity::class,
+        McpServerEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -61,4 +64,9 @@ abstract class AppDatabase : RoomDatabase() {
      * Возвращает DAO для работы с результатами напоминаний
      */
     abstract fun reminderResultDao(): ReminderResultDao
+
+    /**
+     * Возвращает DAO для работы со списком MCP-серверов
+     */
+    abstract fun mcpServerDao(): McpServerDao
 }

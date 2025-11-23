@@ -17,6 +17,12 @@ import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpToolsUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMyGithubReposUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetSavedMcpUrlUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.SaveMcpUrlUseCase
+import ru.izhxx.aichallenge.domain.repository.McpServersRepository
+import ru.izhxx.aichallenge.data.repository.McpServersRepositoryImpl
+import ru.izhxx.aichallenge.mcp.orchestrator.McpRouter
+import ru.izhxx.aichallenge.mcp.orchestrator.PolicyBasedMcpRouter
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpServersUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.SaveMcpServersUseCase
 
 /**
  * Shared Koin-модуль для MCP: транспорт, репозиторий, use case.
@@ -32,6 +38,10 @@ val mcpSharedModule: Module = module {
     // Config repository (DataStore-backed)
     singleOf(::McpConfigRepositoryImpl) bind McpConfigRepository::class
 
+    // Multiple servers repository and router (for orchestration)
+    singleOf(::McpServersRepositoryImpl) bind McpServersRepository::class
+    singleOf(::PolicyBasedMcpRouter) bind McpRouter::class
+
     // Repository
     singleOf(::McpRepositoryImpl) bind McpRepository::class
 
@@ -42,4 +52,8 @@ val mcpSharedModule: Module = module {
     factoryOf(::SaveMcpUrlUseCase)
     factoryOf(::GetGithubUserReposUseCase)
     factoryOf(::GetMyGithubReposUseCase)
+
+    // Multiple servers use cases
+    factoryOf(::GetMcpServersUseCase)
+    factoryOf(::SaveMcpServersUseCase)
 }

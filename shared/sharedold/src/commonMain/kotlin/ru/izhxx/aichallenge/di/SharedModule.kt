@@ -63,7 +63,9 @@ val sharedModule = module {
             mcpRepository = get(),
             mcpConfigRepository = get(),
             toolsMapper = get(),
-            json = get()
+            json = get(),
+            mcpRouter = get(),
+            getMcpServers = get()
         )
     }
 

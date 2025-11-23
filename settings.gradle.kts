@@ -36,7 +36,6 @@ plugins {
 
 includeBuild("build-logic")
 include(":composeApp")
-include(":server")
 include(":shared:sharedold")
 
 // Auto-include discovered modules under target roots

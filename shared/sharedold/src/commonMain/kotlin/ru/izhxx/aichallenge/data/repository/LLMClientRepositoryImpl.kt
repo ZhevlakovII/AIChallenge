@@ -1,5 +1,8 @@
 package ru.izhxx.aichallenge.data.repository
 
+import kotlinx.coroutines.async
+import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -30,13 +33,15 @@ import ru.izhxx.aichallenge.domain.repository.McpConfigRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
 import ru.izhxx.aichallenge.mcp.data.McpToLlmToolsMapper
 import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpServersUseCase
+import ru.izhxx.aichallenge.mcp.orchestrator.McpRouter
 
 /**
  * Реализация репозитория для работы с LLM клиентом.
  *
  * Добавляет поддержку function calling (tools) с использованием MCP:
- * - Подготовка списка инструментов (tools) из MCP по фича-флагу.
- * - Обработка tool_calls от модели, вызов MCP инструментов и возврат tool_result.
+ * - Подготовка списка инструментов (tools) из MCP (несколько серверов через оркестратор).
+ * - Обработка tool_calls от модели с маршрутизацией на подходящий MCP и возвратом tool_result.
  */
 class LLMClientRepositoryImpl(
     private val openAIApi: OpenAIApi,
@@ -46,7 +51,9 @@ class LLMClientRepositoryImpl(
     private val mcpRepository: McpRepository,
     private val mcpConfigRepository: McpConfigRepository,
     private val toolsMapper: McpToLlmToolsMapper,
-    private val json: Json
+    private val json: Json,
+    private val mcpRouter: McpRouter,
+    private val getMcpServers: GetMcpServersUseCase
 ) : LLMClientRepository {
 
     // Создаем логгер
@@ -135,8 +142,8 @@ class LLMClientRepositoryImpl(
                 })
             }.toMutableList()
 
-            // Подготавливаем LLM tools по фича-флагу и сохранённому MCP wsUrl
-            val (wsUrl, llmTools) = buildLlmToolsIfEnabled(llmConfig)
+            // Подготавливаем LLM tools (объединение из нескольких MCP, если задано)
+            val llmTools: List<LlmToolSchemaDTO>? = buildLlmToolsIfEnabled(llmConfig)
 
             // Выполняем первый запрос (с tools, если есть)
             var request = LLMChatRequestDTO(
@@ -169,19 +176,8 @@ class LLMClientRepositoryImpl(
                 // Добавляем сообщение ассистента (с tool_calls) в контекст
                 messagesDto += assistantMsg
 
-                // Выполняем каждый tool_call и добавляем tool-result сообщения
-                val toolResults = if (wsUrl != null) {
-                    handleToolCalls(wsUrl, toolCalls)
-                } else {
-                    // Если wsUrl отсутствует, вернём ошибки инструментов
-                    toolCalls.map { tc ->
-                        ChatMessageDTO(
-                            role = "tool",
-                            content = buildErrorResult("MCP is not configured (wsUrl is null)"),
-                            toolCallId = tc.id
-                        )
-                    }
-                }
+                // Выполняем каждый tool_call (маршрутизация на нужный MCP)
+                val toolResults = handleToolCalls(toolCalls)
 
                 messagesDto.addAll(toolResults)
 
@@ -236,91 +232,129 @@ class LLMClientRepositoryImpl(
     }
 
     /**
-     * Готовит инструменты LLM (OpenAI-style tools), если фича-флаг включён и MCP сконфигурирован.
+     * Готовит инструменты LLM (OpenAI-style tools), если фича-флаг включён.
+     * Поддерживает множественные MCP через реестр оркестратора.
      *
-     * @return пара (wsUrl, tools) — если инструменты недоступны, вернёт (null, null).
+     * Возвращает null, если инструменты недоступны или выключены.
      */
-    private suspend fun buildLlmToolsIfEnabled(config: LLMConfig): Pair<String?, List<LlmToolSchemaDTO>?> {
-        if (!config.enableMcpToolCalling) return null to null
-        val wsUrl = mcpConfigRepository.getWsUrl() ?: return null to null
+    private suspend fun buildLlmToolsIfEnabled(config: LLMConfig): List<LlmToolSchemaDTO>? {
+        if (!config.enableMcpToolCalling) return null
 
+        // 1) Попробуем использовать многосерверную конфигурацию
+        val servers = runCatching { getMcpServers() }.getOrDefault(emptyList())
+        if (servers.isNotEmpty()) {
+            // Сбор реестра (toolName -> wsUrl)
+            runCatching { mcpRouter.rebuildRegistry(servers) }
+                .onFailure { logger.e("Не удалось перестроить реестр MCP-инструментов", it) }
+
+            // Собираем объединённый список инструментов
+            val allTools = mutableListOf<ru.izhxx.aichallenge.mcp.domain.model.McpTool>()
+            servers.forEach { s ->
+                mcpRepository.listTools(s.url)
+                    .onFailure { logger.e("Не удалось получить инструменты MCP с ${s.url}", it) }
+                    .getOrNull()
+                    ?.let { allTools.addAll(it) }
+            }
+            val distinct = allTools.distinctBy { it.name }
+            if (distinct.isEmpty()) {
+                logger.i("MCP-инструменты не получены или пусты, tools отключены (multi)")
+                return null
+            }
+            logger.i("Подготовлено LLM tools (multi-MCP): ${distinct.size}")
+            return toolsMapper.mapDomain(distinct)
+        }
+
+        // 2) Fallback: одиночный URL из старого репозитория
+        val wsUrl = mcpConfigRepository.getWsUrl() ?: return null
         val tools = mcpRepository.listTools(wsUrl)
-            .onFailure { logger.e("Не удалось получить список MCP-инструментов", it) }
+            .onFailure { logger.e("Не удалось получить список MCP-инструментов (single)", it) }
             .getOrNull()
-            ?.let { toolsMapper.mapDomain(it) }
 
         if (tools.isNullOrEmpty()) {
-            logger.i("MCP-инструменты не получены или пусты, tools отключены")
-            return wsUrl to null
+            logger.i("MCP-инструменты не получены или пусты, tools отключены (single)")
+            return null
         }
-        logger.i("Подготовлено LLM tools: ${tools.size}")
-        return wsUrl to tools
+        logger.i("Подготовлено LLM tools (single MCP): ${tools.size}")
+        return toolsMapper.mapDomain(tools)
     }
 
     /**
      * Обрабатывает список tool_calls от ассистента и возвращает список сообщений role="tool".
+     * Для каждого инструмента выполняется маршрутизация через McpRouter.
      */
-    private suspend fun handleToolCalls(wsUrl: String, toolCalls: List<ToolCallDTO>): List<ChatMessageDTO> {
-        val results = mutableListOf<ChatMessageDTO>()
-        for (tc in toolCalls) {
-            val name = tc.function.name
-            val argsStr = tc.function.arguments
-            val startTs = System.currentTimeMillis()
-            val content = when (name) {
-                "github.list_user_repos" -> {
-                    safeCall(name) {
-                        val args = json.parseToJsonElement(argsStr).jsonObject
-                        val username = args["username"]?.jsonPrimitive?.content
-                            ?: return@safeCall buildErrorResult("username is required")
-                        val perPage = args["per_page"]?.jsonPrimitive?.intOrNull() ?: 20
-                        val sort = args["sort"]?.jsonPrimitive?.content ?: "updated"
-                        val repos = mcpRepository
-                            .callListUserRepos(wsUrl, username, perPage, sort)
-                            .getOrElse { e ->
-                                logger.e("Ошибка MCP github.list_user_repos", e)
-                                return@safeCall buildErrorResult("mcp error: ${e.message}")
+    private suspend fun handleToolCalls(toolCalls: List<ToolCallDTO>): List<ChatMessageDTO> = coroutineScope {
+        // Параллелим умеренно (по умолчанию столько же, сколько и toolCalls)
+        val tasks = toolCalls.map { tc ->
+            async {
+                val name = tc.function.name
+                val argsStr = tc.function.arguments
+                val startTs = System.currentTimeMillis()
+
+                val wsUrl = mcpRouter.resolve(name)
+                val content =
+                    if (wsUrl == null) {
+                        buildErrorResult("tool not available: $name")
+                    } else {
+                        when (name) {
+                            "github.list_user_repos" -> {
+                                safeCall(name) {
+                                    val args = json.parseToJsonElement(argsStr).jsonObject
+                                    val username = args["username"]?.jsonPrimitive?.content
+                                        ?: return@safeCall buildErrorResult("username is required")
+                                    val perPage = args["per_page"]?.jsonPrimitive?.intOrNull() ?: 20
+                                    val sort = args["sort"]?.jsonPrimitive?.content ?: "updated"
+                                    val repos = mcpRepository
+                                        .callListUserRepos(wsUrl, username, perPage, sort)
+                                        .getOrElse { e ->
+                                            logger.e("Ошибка MCP github.list_user_repos", e)
+                                            return@safeCall buildErrorResult("mcp error: ${e.message}")
+                                        }
+                                    reposToJsonContent(repos)
+                                }
                             }
-                        reposToJsonContent(repos)
-                    }
-                }
-                "github.list_my_repos" -> {
-                    safeCall(name) {
-                        val args = json.parseToJsonElement(argsStr).jsonObject
-                        val perPage = args["per_page"]?.jsonPrimitive?.intOrNull() ?: 20
-                        val sort = args["sort"]?.jsonPrimitive?.content ?: "updated"
-                        val visibility = args["visibility"]?.jsonPrimitive?.content ?: "all"
-                        val repos = mcpRepository
-                            .callListMyRepos(wsUrl, perPage, sort, visibility)
-                            .getOrElse { e ->
-                                logger.e("Ошибка MCP github.list_my_repos", e)
-                                return@safeCall buildErrorResult("mcp error: ${e.message}")
+
+                            "github.list_my_repos" -> {
+                                safeCall(name) {
+                                    val args = json.parseToJsonElement(argsStr).jsonObject
+                                    val perPage = args["per_page"]?.jsonPrimitive?.intOrNull() ?: 20
+                                    val sort = args["sort"]?.jsonPrimitive?.content ?: "updated"
+                                    val visibility = args["visibility"]?.jsonPrimitive?.content ?: "all"
+                                    val repos = mcpRepository
+                                        .callListMyRepos(wsUrl, perPage, sort, visibility)
+                                        .getOrElse { e ->
+                                            logger.e("Ошибка MCP github.list_my_repos", e)
+                                            return@safeCall buildErrorResult("mcp error: ${e.message}")
+                                        }
+                                    reposToJsonContent(repos)
+                                }
                             }
-                        reposToJsonContent(repos)
-                    }
-                }
-                else -> {
-                    safeCall(name) {
-                        val args = runCatching { json.parseToJsonElement(argsStr) }.getOrNull()
-                            ?: return@safeCall buildErrorResult("invalid arguments json")
-                        mcpRepository
-                            .callTool(wsUrl, name, args)
-                            .mapCatching { resultEl -> json.encodeToString(resultEl) }
-                            .getOrElse { e ->
-                                logger.e("Ошибка MCP $name", e)
-                                buildErrorResult("mcp error: ${e.message}")
+
+                            else -> {
+                                safeCall(name) {
+                                    val args = runCatching { json.parseToJsonElement(argsStr) }.getOrNull()
+                                        ?: return@safeCall buildErrorResult("invalid arguments json")
+                                    mcpRepository
+                                        .callTool(wsUrl, name, args)
+                                        .mapCatching { resultEl -> json.encodeToString(resultEl) }
+                                        .getOrElse { e ->
+                                            logger.e("Ошибка MCP $name", e)
+                                            buildErrorResult("mcp error: ${e.message}")
+                                        }
+                                }
                             }
+                        }
                     }
-                }
+
+                val elapsedMs = System.currentTimeMillis() - startTs
+                logger.i("Tool-calling: $name finished in $elapsedMs ms")
+                ChatMessageDTO(
+                    role = "tool",
+                    content = content,
+                    toolCallId = tc.id
+                )
             }
-            val elapsedMs = System.currentTimeMillis() - startTs
-            logger.i("Tool-calling: $name finished in ${elapsedMs} ms")
-            results += ChatMessageDTO(
-                role = "tool",
-                content = content,
-                toolCallId = tc.id
-            )
         }
-        return results
+        tasks.map { it.await() }
     }
 
     /**
@@ -427,8 +461,8 @@ class LLMClientRepositoryImpl(
                 })
             }.toMutableList()
 
-            // Подготавливаем LLM tools по фича-флагу и сохранённому MCP wsUrl
-            val (wsUrl, llmTools) = buildLlmToolsIfEnabled(llmConfig)
+            // Подготавливаем LLM tools (объединение из нескольких MCP, если задано)
+            val llmTools: List<LlmToolSchemaDTO>? = buildLlmToolsIfEnabled(llmConfig)
 
             // Выполняем первый запрос (с tools, если есть)
             var request = LLMChatRequestDTO(
@@ -459,17 +493,7 @@ class LLMClientRepositoryImpl(
 
                 messagesDto += assistantMsg
 
-                val toolResults = if (wsUrl != null) {
-                    handleToolCalls(wsUrl, toolCalls)
-                } else {
-                    toolCalls.map { tc ->
-                        ChatMessageDTO(
-                            role = "tool",
-                            content = buildErrorResult("MCP is not configured (wsUrl is null)"),
-                            toolCallId = tc.id
-                        )
-                    }
-                }
+                val toolResults = handleToolCalls(toolCalls)
 
                 messagesDto.addAll(toolResults)
 
