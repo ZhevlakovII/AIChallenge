@@ -29,6 +29,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -249,14 +250,17 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
                   "type": "object",
                   "title": "Search in files",
                   "properties": {
-                    "root_path": { "type": "string", "minLength": 1 },
+                    "root_path": { "type": "string", "description": "Один корень; если относительный — будет резолвлен от корня репозитория" },
+                    "roots": { "type": "array", "items": { "type": "string" }, "description": "Несколько корней; если относительные — будут резолвлены от корня репозитория", "default": [] },
                     "regex": { "type": "string", "minLength": 1 },
                     "glob": { "type": "array", "items": { "type": "string" }, "default": [] },
                     "include_content": { "type": "boolean", "default": true },
                     "context_lines": { "type": "integer", "minimum": 0, "maximum": 10, "default": 0 },
-                    "max_bytes_per_file": { "type": "integer", "minimum": 1, "default": 1048576 }
+                    "max_bytes_per_file": { "type": "integer", "minimum": 1, "default": 1048576 },
+                    "modified_since_iso": { "type": "string", "format": "date-time", "description": "Фильтр: изменён не раньше этого времени (ISO-8601)" },
+                    "modified_until_iso": { "type": "string", "format": "date-time", "description": "Фильтр: изменён не позже этого времени (ISO-8601)" }
                   },
-                  "required": ["root_path","regex"],
+                  "required": ["regex"],
                   "additionalProperties": false
                 }
                 """.trimIndent()
@@ -584,10 +588,9 @@ private suspend fun DefaultWebSocketServerSession.handleWorkspaceSearchInFiles(
     args: Map<String, JsonElement>?,
     logger: Logger
 ) {
-    val rootPathStr = args?.get("root_path")?.jsonPrimitive?.content
     val regexStr = args?.get("regex")?.jsonPrimitive?.content
-    if (rootPathStr.isNullOrBlank() || regexStr.isNullOrBlank()) {
-        respondError(json, req.id, -32602, "Invalid params: 'root_path' and 'regex' are required", logger)
+    if (regexStr.isNullOrBlank()) {
+        respondError(json, req.id, -32602, "Invalid params: 'regex' is required", logger)
         return
     }
     val includeContent = args["include_content"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
@@ -597,59 +600,106 @@ private suspend fun DefaultWebSocketServerSession.handleWorkspaceSearchInFiles(
     val globArr = args["glob"]?.jsonArray
     val globs = globArr?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
 
-    val root = Paths.get(rootPathStr).normalize()
-    if (!Files.exists(root) || !Files.isDirectory(root)) {
-        respondError(json, req.id, -32602, "root_path is not a directory: $rootPathStr", logger)
+    val rootsArr = args["roots"]?.jsonArray
+    val rootsList = rootsArr?.mapNotNull { it.jsonPrimitive.contentOrNull }?.filter { it.isNotBlank() } ?: emptyList()
+    val singleRootPathStr = args?.get("root_path")?.jsonPrimitive?.content
+
+    val modifiedSinceIso = args["modified_since_iso"]?.jsonPrimitive?.content
+    val modifiedUntilIso = args["modified_until_iso"]?.jsonPrimitive?.content
+    val modifiedSince = modifiedSinceIso?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
+    val modifiedUntil = modifiedUntilIso?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
+
+    fun findRepoRoot(start: Path = Paths.get("").toAbsolutePath().normalize()): Path? {
+        var cur = start
+        repeat(20) {
+            val dotGit = cur.resolve(".git")
+            val gradlew = cur.resolve("gradlew")
+            val settings = cur.resolve("settings.gradle.kts")
+            if (Files.isDirectory(dotGit) || Files.exists(gradlew) || Files.exists(settings)) return cur
+            cur = cur.parent ?: return null
+        }
+        return null
+    }
+
+    fun resolveRoot(input: String): Path? {
+        val p = Paths.get(input).normalize()
+        if (Files.isDirectory(p)) return p
+        val repo = findRepoRoot()
+        if (repo != null) {
+            val candidate = repo.resolve(input).normalize()
+            if (Files.isDirectory(candidate)) return candidate
+        }
+        return null
+    }
+
+    val candidateRoots: List<Path> = when {
+        rootsList.isNotEmpty() -> rootsList.mapNotNull { resolveRoot(it) }
+        !singleRootPathStr.isNullOrBlank() -> listOfNotNull(resolveRoot(singleRootPathStr))
+        else -> emptyList()
+    }
+
+    if (candidateRoots.isEmpty()) {
+        respondError(json, req.id, -32602, "Invalid params: provide 'root_path' or 'roots' that resolve to existing directories", logger)
         return
     }
 
+    val compiled = Pattern.compile(regexStr)
     val matchers: List<PathMatcher> = globs.map { pattern ->
         FileSystems.getDefault().getPathMatcher("glob:$pattern")
     }
 
-    val compiled = Pattern.compile(regexStr)
-    val matchesJson = buildJsonArray {
-        Files.walk(root).use { stream ->
-            stream.asSequence()
-                .filter { Files.isRegularFile(it) }
-                .filter { !it.toString().contains("${FileSystems.getDefault().separator}.git${FileSystems.getDefault().separator}") }
-                .filter { path ->
-                    if (matchers.isEmpty()) true
-                    else {
-                        val rel = root.relativize(path).toString().replace('\\', '/')
-                        matchers.any { m ->
-                            // Сопоставление по относительному пути
-                            m.matches(Paths.get(rel)) || m.matches(Paths.get("./$rel"))
-                        }
-                    }
-                }
-                .forEach { path ->
-                    val size = runCatching { Files.size(path) }.getOrDefault(Long.MAX_VALUE)
-                    if (size > maxBytes) return@forEach
-                    val content = runCatching { Files.readAllLines(path, StandardCharsets.UTF_8) }.getOrNull() ?: return@forEach
-                    content.forEachIndexed { idx, line ->
-                        val matcher = compiled.matcher(line)
-                        if (matcher.find()) {
-                            val lineNum = idx + 1
-                            val before =
-                                if (includeContent && contextLines > 0) content.subList(maxOf(0, idx - contextLines), idx) else emptyList()
-                            val after =
-                                if (includeContent && contextLines > 0) content.subList(minOf(content.size, idx + 1), minOf(content.size, idx + 1 + contextLines)) else emptyList()
+    fun filePassesGlob(root: Path, path: Path): Boolean {
+        if (matchers.isEmpty()) return true
+        val rel = root.relativize(path).toString().replace('\\', '/')
+        return matchers.any { m ->
+            m.matches(Paths.get(rel)) || m.matches(Paths.get("./$rel"))
+        }
+    }
 
-                            add(
-                                buildJsonObject {
-                                    put("file", JsonPrimitive(path.toString()))
-                                    put("line", JsonPrimitive(lineNum))
-                                    put("text", JsonPrimitive(line))
-                                    if (includeContent && contextLines > 0) {
-                                        put("before", json.encodeToJsonElement(before))
-                                        put("after", json.encodeToJsonElement(after))
+    fun filePassesTimeFilter(path: Path): Boolean {
+        if (modifiedSince == null && modifiedUntil == null) return true
+        val lm = runCatching { Files.getLastModifiedTime(path).toInstant() }.getOrNull() ?: return true
+        if (modifiedSince != null && lm.isBefore(modifiedSince)) return false
+        if (modifiedUntil != null && lm.isAfter(modifiedUntil)) return false
+        return true
+    }
+
+    val matchesJson = buildJsonArray {
+        candidateRoots.forEach { root ->
+            Files.walk(root).use { stream ->
+                stream.asSequence()
+                    .filter { Files.isRegularFile(it) }
+                    .filter { !it.toString().contains("${FileSystems.getDefault().separator}.git${FileSystems.getDefault().separator}") }
+                    .filter { path -> filePassesGlob(root, path) }
+                    .filter { path -> filePassesTimeFilter(path) }
+                    .forEach { path ->
+                        val size = runCatching { Files.size(path) }.getOrDefault(Long.MAX_VALUE)
+                        if (size > maxBytes) return@forEach
+                        val content = runCatching { Files.readAllLines(path, StandardCharsets.UTF_8) }.getOrNull() ?: return@forEach
+                        content.forEachIndexed { idx, line ->
+                            val matcher = compiled.matcher(line)
+                            if (matcher.find()) {
+                                val lineNum = idx + 1
+                                val before =
+                                    if (includeContent && contextLines > 0) content.subList(maxOf(0, idx - contextLines), idx) else emptyList()
+                                val after =
+                                    if (includeContent && contextLines > 0) content.subList(minOf(content.size, idx + 1), minOf(content.size, idx + 1 + contextLines)) else emptyList()
+
+                                add(
+                                    buildJsonObject {
+                                        put("file", JsonPrimitive(path.toString()))
+                                        put("line", JsonPrimitive(lineNum))
+                                        put("text", JsonPrimitive(line))
+                                        if (includeContent && contextLines > 0) {
+                                            put("before", json.encodeToJsonElement(before))
+                                            put("after", json.encodeToJsonElement(after))
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
-                }
+            }
         }
     }
 
