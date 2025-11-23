@@ -1,6 +1,7 @@
 package ru.izhxx.aichallenge.data.repository
 
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.serialization.encodeToString
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
@@ -354,7 +355,7 @@ class LLMClientRepositoryImpl(
                 )
             }
         }
-        tasks.map { it.await() }
+        tasks.awaitAll()
     }
 
     /**

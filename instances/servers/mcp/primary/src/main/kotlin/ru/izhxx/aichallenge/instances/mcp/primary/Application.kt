@@ -41,6 +41,7 @@ import ru.izhxx.aichallenge.common.SERVER_PORT
 import ru.izhxx.aichallenge.mcp.data.model.McpToolDTO
 import ru.izhxx.aichallenge.mcp.data.model.ToolsListResult
 import ru.izhxx.aichallenge.mcp.data.rpc.InitializeResult
+import ru.izhxx.aichallenge.mcp.data.rpc.RpcError
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcRequest
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcResponse
 import java.nio.charset.StandardCharsets
@@ -267,26 +268,6 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
             )
         ),
         McpToolDTO(
-            name = "workspace.write_text",
-            description = "Запись текста в файл с возможным созданием директорий",
-            inputSchema = json.parseToJsonElement(
-                """
-                {
-                  "type": "object",
-                  "title": "Write text file",
-                  "properties": {
-                    "path": { "type": "string", "minLength": 1 },
-                    "content": { "type": "string" },
-                    "create_dirs": { "type": "boolean", "default": true },
-                    "overwrite": { "type": "boolean", "default": true }
-                  },
-                  "required": ["path","content"],
-                  "additionalProperties": false
-                }
-                """.trimIndent()
-            )
-        ),
-        McpToolDTO(
             name = "textops.extract_todos",
             description = "Преобразование найденных строк в структурированные задачи (TODO/FIXME)",
             inputSchema = json.parseToJsonElement(
@@ -410,7 +391,6 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
 
         // Новые локальные (без сети)
         "workspace.search_in_files" -> handleWorkspaceSearchInFiles(req, json, args, logger)
-        "workspace.write_text" -> handleWorkspaceWriteText(req, json, args, logger)
         "textops.extract_todos" -> handleTextopsExtractTodos(req, json, args, logger)
         "mathops.aggregate_tasks" -> handleMathopsAggregateTasks(req, json, args, logger)
 
@@ -709,59 +689,6 @@ private suspend fun DefaultWebSocketServerSession.handleWorkspaceSearchInFiles(
     respondResult(json, req.id, resultEl, logger)
 }
 
-private suspend fun DefaultWebSocketServerSession.handleWorkspaceWriteText(
-    req: RpcRequest,
-    json: Json,
-    args: Map<String, JsonElement>?,
-    logger: Logger
-) {
-    val pathStr = args?.get("path")?.jsonPrimitive?.content
-    val contentStr = args?.get("content")?.jsonPrimitive?.content
-    val createDirs = args?.get("create_dirs")?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
-    val overwrite = args?.get("overwrite")?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
-
-    if (pathStr.isNullOrBlank() || contentStr == null) {
-        respondError(json, req.id, -32602, "Invalid params: 'path' and 'content' are required", logger)
-        return
-    }
-
-    val p: Path = Paths.get(pathStr).normalize()
-    if (createDirs) {
-        val parent = p.parent
-        if (parent != null) {
-            runCatching { Files.createDirectories(parent) }.onFailure {
-                respondError(json, req.id, -32001, "Failed to create directories: ${it.message}", logger)
-                return
-            }
-        }
-    }
-    if (!overwrite && Files.exists(p)) {
-        respondError(json, req.id, -32002, "File already exists and overwrite=false: $p", logger)
-        return
-    }
-
-    val written = runCatching {
-        val bytes = contentStr.toByteArray(StandardCharsets.UTF_8)
-        Files.write(
-            p,
-            bytes,
-            StandardOpenOption.CREATE,
-            if (overwrite) StandardOpenOption.TRUNCATE_EXISTING else StandardOpenOption.CREATE_NEW,
-            StandardOpenOption.WRITE
-        )
-        bytes.size
-    }.getOrElse {
-        respondError(json, req.id, -32003, "Write failed: ${it.message}", logger)
-        return
-    }
-
-    val resultEl = buildJsonObject {
-        put("path", JsonPrimitive(p.toString()))
-        put("bytes_written", JsonPrimitive(written))
-    }
-    respondResult(json, req.id, resultEl, logger)
-}
-
 private suspend fun DefaultWebSocketServerSession.handleTextopsExtractTodos(
     req: RpcRequest,
     json: Json,
@@ -900,7 +827,7 @@ private suspend fun DefaultWebSocketServerSession.respondError(
     message: String,
     logger: Logger
 ) {
-    val err = ru.izhxx.aichallenge.mcp.data.rpc.RpcError(code = code, message = message)
+    val err = RpcError(code = code, message = message)
     val resp = RpcResponse(id = id, error = err)
     val out = json.encodeToString(resp)
     logger.d("=> $out")

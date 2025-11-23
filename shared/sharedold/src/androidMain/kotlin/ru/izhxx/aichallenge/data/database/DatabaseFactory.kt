@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.data.database
 
 import android.content.Context
 import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -17,6 +18,7 @@ actual object DatabaseFactory : KoinComponent {
             context = context,
             name = context.applicationContext.getDatabasePath(DATABASE_NAME).absolutePath,
         )
+            .setDriver(BundledSQLiteDriver())
             .fallbackToDestructiveMigration(true)
             .build()
     }

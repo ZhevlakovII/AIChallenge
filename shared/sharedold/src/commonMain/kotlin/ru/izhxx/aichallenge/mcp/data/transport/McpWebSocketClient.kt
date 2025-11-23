@@ -182,7 +182,7 @@ class McpWebSocketClient(
                     val text = (frame as? Frame.Text)?.readText() ?: continue
                     logger.d("<- $text")
 
-                    val resp = kotlin.runCatching { json.decodeFromString(RpcResponse.serializer(), text) }.getOrNull()
+                    val resp = runCatching { json.decodeFromString(RpcResponse.serializer(), text) }.getOrNull()
                         ?: continue
 
                     if (resp.id == 1) {
