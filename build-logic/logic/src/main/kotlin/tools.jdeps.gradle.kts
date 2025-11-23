@@ -1,88 +1,24 @@
-import org.gradle.kotlin.dsl.implementation
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+/*
+ * Convention plugin: tools.jdeps
+ * Универсальные задачи анализа зависимостей с использованием jdeps и Graphviz (dot).
+ * Работает и для KMP (берет jvmJar/jvmRuntimeClasspath) и для JVM-проектов (jar/runtimeClasspath).
+ */
+import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.bundling.Jar
+import java.io.File
 
-plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.compose.multiplatform)
-    alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.compose.hot.reload)
-}
+// Общие параметры по умолчанию
+val moduleName = project.name
+val includeRegex = "ru\\\\.izhxx\\\\..*"
+val featureRootRegex = "ru\\\\.izhxx\\\\.aichallenge\\\\.features"
 
-kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_21)
-        }
-    }
+// Определяем jar-задачу и runtime classpath в зависимости от типа проекта (KMP vs JVM)
+val hasJvmJar = tasks.names.contains("jvmJar")
+val jarTaskName = if (hasJvmJar) "jvmJar" else "jar"
+val runtimeConfName = if (configurations.names.contains("jvmRuntimeClasspath")) "jvmRuntimeClasspath" else "runtimeClasspath"
 
-    jvm()
-
-    sourceSets {
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.koin.android)
-            implementation(libs.koin.androidx.compose)
-        }
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.androidx.navigation.compose)
-            implementation(libs.compose.icons.material)
-            implementation(libs.koin.core)
-            implementation(libs.koin.compose)
-            implementation(libs.koin.compose.viewmodel)
-            implementation(libs.kotlinx.datetime)
-            implementation(projects.shared.sharedold)
-        }
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
-        }
-        jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.koin.core)
-        }
-    }
-}
-
-android {
-    namespace = "ru.izhxx.aichallenge"
-
-    defaultConfig {
-        applicationId = "ru.izhxx.aichallenge"
-        versionCode = 1
-        versionName = "1.0"
-    }
-}
-
-dependencies {
-    debugImplementation(compose.uiTooling)
-}
-
-compose.desktop {
-    application {
-        mainClass = "ru.izhxx.aichallenge.MainKt"
-
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "ru.izhxx.aichallenge"
-            packageVersion = "1.0.0"
-        }
-    }
-}
-
-// ===== Анализ зависимостей классов (jdeps) для модуля composeApp =====
-
-val moduleName = "composeApp"
-
+// Нахождение исполнимых файлов в PATH
 fun findExecutable(name: String): String? {
     val os = System.getProperty("os.name").lowercase()
     val ext = if (os.contains("win")) ".exe" else ""
@@ -96,29 +32,32 @@ fun findExecutable(name: String): String? {
 val jdepsOutputDir = layout.buildDirectory.dir("reports/jdeps/$moduleName")
 val jdepsSummaryDot = jdepsOutputDir.map { it.file("summary.dot") }
 
+val jdepsPkgOutputDir = layout.buildDirectory.dir("reports/jdeps/$moduleName/package")
+val jdepsPkgSummaryDot = jdepsPkgOutputDir.map { it.file("summary.dot") }
+
 val jdepsExecPath = providers.provider {
     val os = System.getProperty("os.name").lowercase()
     val ext = if (os.contains("win")) ".exe" else ""
     val javaHome = System.getProperty("java.home")
-    val candidate = File(javaHome, "bin/jdeps$ext")
-    candidate.absolutePath
+    File(javaHome, "bin/jdeps$ext").absolutePath
 }
 
+// ---- Класс-уровень графа (verbose:class) ----
 tasks.register<Exec>("jdepsClassGraph") {
     group = "analysis"
     description = "Генерирует DOT-граф зависимостей классов для $moduleName через jdeps"
     notCompatibleWithConfigurationCache("Custom Exec with providers; skip CC for stability")
-    dependsOn("jvmJar")
+    dependsOn(jarTaskName)
     doFirst {
         jdepsOutputDir.get().asFile.mkdirs()
     }
-    val jarFile = tasks.named("jvmJar").flatMap { (it as org.gradle.api.tasks.bundling.Jar).archiveFile }
-    val runtimeCp = configurations.getByName("jvmRuntimeClasspath").asPath
+    val jarFile = tasks.named(jarTaskName).flatMap { (it as Jar).archiveFile }
+    val runtimeCp = configurations.getByName(runtimeConfName).asPath
     executable = jdepsExecPath.get()
     args(
         "--multi-release", System.getProperty("java.specification.version"),
         "-verbose:class",
-        "-include", "ru\\.izhxx\\..*",
+        "-include", includeRegex,
         "--dot-output", jdepsOutputDir.get().asFile.absolutePath,
         "-cp", runtimeCp,
         jarFile.get().asFile.absolutePath
@@ -140,15 +79,14 @@ tasks.register<Exec>("renderClassGraphSvg") {
     notCompatibleWithConfigurationCache("Exec with external tool; skip CC")
     dependsOn("jdepsClassGraph")
     onlyIf {
-        val summary = jdepsSummaryDot.get().asFile
-        summary.exists() && findExecutable("dot") != null
+        jdepsSummaryDot.get().asFile.exists() && findExecutable("dot") != null
     }
     doFirst {
         val outFile = rootProject.layout.projectDirectory.file("docs/architecture/$moduleName-class-deps.svg").asFile
         outFile.parentFile.mkdirs()
-        val dotExe = findExecutable("dot")!!
-        executable = dotExe
-        args(
+        val dotExe = findExecutable("dot") ?: return@doFirst
+        commandLine(
+            dotExe,
             "-Tsvg",
             jdepsSummaryDot.get().asFile.absolutePath,
             "-o",
@@ -157,27 +95,22 @@ tasks.register<Exec>("renderClassGraphSvg") {
     }
 }
 
-// ===== Доп. задачи: пакетный уровень, срезы по фичам, раскраска/валидация =====
-
-// Пакетный уровень (verbose:package)
-val jdepsPkgOutputDir = layout.buildDirectory.dir("reports/jdeps/$moduleName/package")
-val jdepsPkgSummaryDot = jdepsPkgOutputDir.map { it.file("summary.dot") }
-
+// ---- Пакет-уровень графа (verbose:package) ----
 tasks.register<Exec>("jdepsPackageGraph") {
     group = "analysis"
     description = "Генерирует DOT-граф зависимостей на уровне ПАКЕТОВ для $moduleName через jdeps"
     notCompatibleWithConfigurationCache("Custom Exec with providers; skip CC for stability")
-    dependsOn("jvmJar")
+    dependsOn(jarTaskName)
     doFirst {
         jdepsPkgOutputDir.get().asFile.mkdirs()
     }
-    val jarFile = tasks.named("jvmJar").flatMap { (it as org.gradle.api.tasks.bundling.Jar).archiveFile }
-    val runtimeCp = configurations.getByName("jvmRuntimeClasspath").asPath
+    val jarFile = tasks.named(jarTaskName).flatMap { (it as Jar).archiveFile }
+    val runtimeCp = configurations.getByName(runtimeConfName).asPath
     executable = jdepsExecPath.get()
     args(
         "--multi-release", System.getProperty("java.specification.version"),
         "-verbose:package",
-        "-include", "ru\\.izhxx\\..*",
+        "-include", includeRegex,
         "--dot-output", jdepsPkgOutputDir.get().asFile.absolutePath,
         "-cp", runtimeCp,
         jarFile.get().asFile.absolutePath
@@ -193,26 +126,25 @@ tasks.register<Sync>("copyPackageGraphToDocs") {
     into(rootProject.layout.projectDirectory.dir("docs/architecture/$moduleName/package"))
 }
 
-// Срез по фиче: -Pfeature=<name> (например, chat)
+// ---- Срез по фиче: -Pfeature=<name> ----
 tasks.register<Exec>("jdepsFeatureGraph") {
     group = "analysis"
     description = "Генерирует DOT-граф зависимостей классов для выбранной фичи (задайте -Pfeature=<name>)"
     notCompatibleWithConfigurationCache("Custom Exec with providers; skip CC for stability")
-    dependsOn("jvmJar")
+    dependsOn(jarTaskName)
     onlyIf { project.findProperty("feature") != null }
     val feature = (project.findProperty("feature") as String?)
     val featureOut = layout.buildDirectory.dir("reports/jdeps/$moduleName/features/${feature ?: "unknown"}")
     doFirst {
         featureOut.get().asFile.mkdirs()
     }
-    val jarFile = tasks.named("jvmJar").flatMap { (it as org.gradle.api.tasks.bundling.Jar).archiveFile }
-    val runtimeCp = configurations.getByName("jvmRuntimeClasspath").asPath
+    val jarFile = tasks.named(jarTaskName).flatMap { (it as Jar).archiveFile }
+    val runtimeCp = configurations.getByName(runtimeConfName).asPath
     executable = jdepsExecPath.get()
-    // Включаем только классы внутри пакета фичи
     args(
         "--multi-release", System.getProperty("java.specification.version"),
         "-verbose:class",
-        "-include", "ru\\.izhxx\\.aichallenge\\.features\\.${feature}\\..*",
+        "-include", "$featureRootRegex\\.${feature}\\..*",
         "--dot-output", featureOut.get().asFile.absolutePath,
         "-cp", runtimeCp,
         jarFile.get().asFile.absolutePath
@@ -230,10 +162,10 @@ tasks.register<Sync>("copyFeatureGraphToDocs") {
     into(rootProject.layout.projectDirectory.dir("docs/architecture/$moduleName/features/${feature ?: "unknown"}"))
 }
 
-// Раскраска слоёв и подсветка запрещённых зависимостей для class-графа
+// ---- Раскраска class-графа и подсветка запрещенных зависимостей ----
 tasks.register("decorateClassGraph") {
     group = "analysis"
-    description = "Раскрашивает узлы по слоям (presentation/domain/data) и подсвечивает запрещённые зависимости (красным)"
+    description = "Раскрашивает узлы по слоям (presentation/domain/data) и подсвечивает запрещенные зависимости (красным)"
     notCompatibleWithConfigurationCache("String processing of DOT; skip CC")
     dependsOn("copyClassGraphToDocs")
     doLast {
@@ -276,7 +208,6 @@ tasks.register("decorateClassGraph") {
         lines.forEach { line ->
             if (!injected && line.contains("{")) {
                 decorated.append(line).append('\n')
-                // Вставляем определения узлов с цветами
                 nodes.forEach { n ->
                     when (layerOf(n)) {
                         "presentation" -> decorated.append("  \"").append(n).append("\" [style=filled, fillcolor=\"#80b1d3\"];").append('\n')
@@ -292,15 +223,10 @@ tasks.register("decorateClassGraph") {
                     val to = m.groupValues[2]
                     val isDto = to.contains(".data.model.") && to.endsWith("DTO")
                     val forbidden =
-                        // Presentation -> Data (UI не должна зависеть от Data-реализаций/DTO)
                         (presentation.containsMatchIn(from) && data.containsMatchIn(to)) ||
-                        // Domain -> Data (Domain не должен зависеть от Data)
                         (domain.containsMatchIn(from) && data.containsMatchIn(to)) ||
-                        // Domain -> Presentation (Domain не должен зависеть от UI)
                         (domain.containsMatchIn(from) && presentation.containsMatchIn(to)) ||
-                        // Data -> Presentation (Data не должен зависеть от UI)
                         (data.containsMatchIn(from) && presentation.containsMatchIn(to)) ||
-                        // DTO в Presentation/Domain запрещены
                         ((presentation.containsMatchIn(from) || domain.containsMatchIn(from)) && isDto)
                     if (forbidden) {
                         violations += "\"$from\" -> \"$to\""
@@ -332,20 +258,15 @@ tasks.register<Exec>("renderDecoratedClassGraphSvg") {
     dependsOn("decorateClassGraph")
     onlyIf {
         val inFile = rootProject.layout.projectDirectory.file("docs/architecture/$moduleName/summary.decorated.dot").asFile
-        inFile.exists() && (System.getenv("PATH")?.split(File.pathSeparator)?.any { File(it, "dot").exists() || File(it, "dot.exe").exists() } == true)
+        inFile.exists() && findExecutable("dot") != null
     }
     doFirst {
         val inFile = rootProject.layout.projectDirectory.file("docs/architecture/$moduleName/summary.decorated.dot").asFile
         val outFile = rootProject.layout.projectDirectory.file("docs/architecture/$moduleName/summary.decorated.svg").asFile
         outFile.parentFile.mkdirs()
-        // Поиск dot
-        val path = System.getenv("PATH") ?: ""
-        val exe = path.split(File.pathSeparator)
-            .map { File(it, if (System.getProperty("os.name").lowercase().contains("win")) "dot.exe" else "dot") }
-            .firstOrNull { it.exists() && it.canExecute() }
-            ?: return@doFirst
+        val dotExe = findExecutable("dot") ?: return@doFirst
         commandLine(
-            exe.absolutePath,
+            dotExe,
             "-Tsvg",
             inFile.absolutePath,
             "-o",

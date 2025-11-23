@@ -1,3 +1,54 @@
+# Запись прогресса: 2025-11-23
+
+Мета:
+- Дата: 2025-11-23
+- Период/Время: W47 • ~00:50–01:00 MSK
+- Автор: @auto
+- Статус: Final
+
+Резюме (TL;DR)
+- Завершена интеграция build-logic и конвеншн-плагинов; вынесены общие tools (jdeps/Graphviz) в единый плагин; базовые конфигурации для KMP/Android оформлены в виде расширений. Все платформенные/общие параметры сведены к константам, без дополнительных классов/объектов. Утверждён нейминг единого идентификатора пакета (namespace/applicationId/packageName) и Android‑специфичный versionCode. Java target задан через Kotlin DSL (JvmTarget.JVM_21).
+
+Ссылки на контекст/код
+- Корневые настройки: [../settings.gradle.kts](../settings.gradle.kts), [../build.gradle.kts](../build.gradle.kts)
+- Build-logic (precompiled plugins):
+  - frontend.compose: build-logic/logic/src/main/kotlin/frontend.compose.gradle.kts
+  - frontend.library: build-logic/logic/src/main/kotlin/frontend.library.gradle.kts
+  - backend.library: build-logic/logic/src/main/kotlin/backend.library.gradle.kts
+  - tools.jdeps: build-logic/logic/src/main/kotlin/tools.jdeps.gradle.kts
+  - (см. также директорию: build-logic/logic/src/main/kotlin/)
+- Version Catalog: [../gradle/libs.versions.toml](../gradle/libs.versions.toml)
+
+Сделано за период
+- Утверждён подход «без дополнительных классов/объектов» для конфигов: константы и расширения вместо data-классов.
+- Введены расширения для базовой конфигурации:
+  - Kotlin Multiplatform: KotlinMultiplatformExtensions.config (единый javaTarget через JvmTarget.JVM_21).
+  - Android Library: LibraryExtension.config (compileSdk/minSdk/targetSdk из Version Catalog, Java 21).
+- Инструменты вынесены в отдельный convention plugin tools.jdeps:
+  - Централизация задач jdeps/Graphviz; устранено дублирование в модульных build.gradle.kts.
+  - Поддержка KMP (jvmJar/jvmRuntimeClasspath) и JVM (jar/runtimeClasspath).
+- Унификация идентификаторов пакета: namespace/applicationId/packageName — единое значение («ru.izhxx.aichallenge»).
+- Уточнено: versionCode — параметр строго Android‑специфичный.
+- Java target явным образом задан в Kotlin DSL через JvmTarget.JVM_21 (и Java Toolchain 21 на уровне Gradle).
+
+Результаты и метрики
+- [x] build-logic подключён в корне (includeBuild("build-logic")) и используется модулями.
+- [x] Конвеншн‑плагины реализованы и применяются.
+- [x] Аналитика зависимостей централизована (tools.jdeps).
+- [x] Единые константы и нейминг идентификаторов пакета.
+- [x] Единый javaTarget и Java Toolchain (21).
+
+Риски и блокеры
+- Нет блокеров. Возможна дальнейшая доработка iOS‑части по мере расширения таргетов/дистрибуций.
+
+Следующие шаги
+- [ ] Задокументировать соглашения (нейминг, javaTarget, android/iOS отличия) в docs/human/ProjectStructure.md.
+- [ ] Включить проверки/задачи tools.jdeps в CI.
+- [ ] При расширении KMP‑таргетов (iOS) поддерживать единые константы и расширения.
+
+Журнал (опционально)
+- [00:56] Конвеншн‑плагины активны; вынесение tools завершено; соглашения по идентификаторам и javaTarget зафиксированы.
+
 # Запись прогресса: 2025-11-22
 
 Мета:

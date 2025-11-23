@@ -1,5 +1,3 @@
-import java.io.File
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
@@ -8,6 +6,7 @@ plugins {
 
 group = "ru.izhxx.aichallenge"
 version = "1.0.0"
+
 application {
     mainClass.set("ru.izhxx.aichallenge.ApplicationKt")
     
@@ -16,7 +15,7 @@ application {
 }
 
 dependencies {
-    implementation(projects.shared)
+    implementation(projects.shared.sharedold)
     implementation(libs.logback)
 
     // Ktor Server
