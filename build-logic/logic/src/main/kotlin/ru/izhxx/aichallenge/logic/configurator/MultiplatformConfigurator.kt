@@ -14,15 +14,14 @@ fun KotlinMultiplatformExtension.config() {
         }
     }
     jvm()
-    // Настройка в будующих версиях
-//    listOf(
-//        iosX64(),
-//        iosArm64(),
-//        iosSimulatorArm64()
-//    ).forEach { target ->
-//        target.binaries.framework {
-//            baseName = project.name
-//            isStatic = true
-//        }
-//    }
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { target ->
+        target.binaries.framework {
+            baseName = project.name
+            isStatic = true
+        }
+    }
 }

@@ -6,7 +6,8 @@ plugins {
 }
 
 android {
-    config("core.ui.mvi")
+    // Namespace будет ru.izhxx.aichallenge.shared.core.safecall
+    config("core.safecall")
 }
 
 kotlin {
