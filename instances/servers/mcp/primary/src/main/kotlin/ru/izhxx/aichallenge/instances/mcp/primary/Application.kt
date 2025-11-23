@@ -26,9 +26,12 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -39,12 +42,29 @@ import ru.izhxx.aichallenge.mcp.data.model.ToolsListResult
 import ru.izhxx.aichallenge.mcp.data.rpc.InitializeResult
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcRequest
 import ru.izhxx.aichallenge.mcp.data.rpc.RpcResponse
+import java.nio.charset.StandardCharsets
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.PathMatcher
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.util.regex.Pattern
+import kotlin.streams.asSequence
 
 /**
- * Primary MCP-сервер (копия существующего :server с тем же набором инструментов).
+ * Primary MCP-сервер.
  * WS: ws://127.0.0.1:SERVER_PORT/mcp
+ *
+ * В этом инстансе реализованы локальные инструменты без сети:
+ * - workspace.search_in_files
+ * - workspace.write_text
+ * - textops.extract_todos
+ * - mathops.aggregate_tasks
+ *
+ * (Старые инструменты сохранены для обратной совместимости.)
  */
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
@@ -124,6 +144,7 @@ private suspend fun handleRpcRequest(
 
 private fun buildMcpTools(json: Json): List<McpToolDTO> {
     return listOf(
+        // Базовые (были ранее)
         McpToolDTO(
             name = "health_check",
             description = "Состояние MCP сервера",
@@ -216,6 +237,117 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
                 }
                 """.trimIndent()
             )
+        ),
+
+        // Новые локальные инструменты (без сети)
+        McpToolDTO(
+            name = "workspace.search_in_files",
+            description = "Поиск по файлам (regex) с опциональным контекстом и фильтром по glob",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Search in files",
+                  "properties": {
+                    "root_path": { "type": "string", "minLength": 1 },
+                    "regex": { "type": "string", "minLength": 1 },
+                    "glob": { "type": "array", "items": { "type": "string" }, "default": [] },
+                    "include_content": { "type": "boolean", "default": true },
+                    "context_lines": { "type": "integer", "minimum": 0, "maximum": 10, "default": 0 },
+                    "max_bytes_per_file": { "type": "integer", "minimum": 1, "default": 1048576 }
+                  },
+                  "required": ["root_path","regex"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "workspace.write_text",
+            description = "Запись текста в файл с возможным созданием директорий",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Write text file",
+                  "properties": {
+                    "path": { "type": "string", "minLength": 1 },
+                    "content": { "type": "string" },
+                    "create_dirs": { "type": "boolean", "default": true },
+                    "overwrite": { "type": "boolean", "default": true }
+                  },
+                  "required": ["path","content"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "textops.extract_todos",
+            description = "Преобразование найденных строк в структурированные задачи (TODO/FIXME)",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Extract TODO items",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "file": { "type": "string" },
+                          "line": { "type": "integer" },
+                          "text": { "type": "string" }
+                        },
+                        "required": ["file","line","text"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "patterns": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "default": ["TODO","FIXME"]
+                    }
+                  },
+                  "required": ["items"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "mathops.aggregate_tasks",
+            description = "Агрегация задач по приоритетам и тегам",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Aggregate tasks",
+                  "properties": {
+                    "tasks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": { "type": "string" },
+                          "priority": { "type": "string" },
+                          "tags": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "default": []
+                          }
+                        },
+                        "required": ["title"],
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": ["tasks"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
         )
     )
 }
@@ -229,7 +361,7 @@ private suspend fun DefaultWebSocketServerSession.handleInitialize(
         InitializeResult(
             serverInfo = buildJsonObject {
                 put("name", "AIChallenge-MCP-Primary")
-                put("version", "1.0.0")
+                put("version", "1.1.0")
             },
             capabilities = buildJsonObject { }
         )
@@ -263,6 +395,7 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
     }
 
     when (toolName) {
+        // Существующие
         "health_check" -> handleHealthCheck(req, json, logger)
         "get_time" -> handleGetTime(req, json, logger)
         "get_rub_usd_rate" -> handleGetRubUsdRate(req, json, http, logger)
@@ -270,16 +403,25 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
         "sum" -> handleSum(req, json, args, logger)
         "github.list_user_repos" -> handleGithubListUserRepos(req, json, args, http, logger)
         "github.list_my_repos" -> handleGithubListMyRepos(req, json, args, http, logger)
+
+        // Новые локальные (без сети)
+        "workspace.search_in_files" -> handleWorkspaceSearchInFiles(req, json, args, logger)
+        "workspace.write_text" -> handleWorkspaceWriteText(req, json, args, logger)
+        "textops.extract_todos" -> handleTextopsExtractTodos(req, json, args, logger)
+        "mathops.aggregate_tasks" -> handleMathopsAggregateTasks(req, json, args, logger)
+
         else -> respondError(json, req.id, -32601, "Unknown tool: $toolName", logger)
     }
 }
+
+// ======= СТАРЫЕ ОБРАБОТЧИКИ =======
 
 private suspend fun DefaultWebSocketServerSession.handleHealthCheck(
     req: RpcRequest,
     json: Json,
     logger: Logger
 ) {
-    val resultEl = buildJsonObject { put("status", kotlinx.serialization.json.JsonPrimitive("ok")) }
+    val resultEl = buildJsonObject { put("status", JsonPrimitive("ok")) }
     respondResult(json, req.id, resultEl, logger)
 }
 
@@ -290,7 +432,7 @@ private suspend fun DefaultWebSocketServerSession.handleGetTime(
 ) {
     val now = Instant.now()
     val iso = DateTimeFormatter.ISO_INSTANT.format(now)
-    val resultEl = buildJsonObject { put("iso", kotlinx.serialization.json.JsonPrimitive(iso)) }
+    val resultEl = buildJsonObject { put("iso", JsonPrimitive(iso)) }
     respondResult(json, req.id, resultEl, logger)
 }
 
@@ -312,11 +454,11 @@ private suspend fun DefaultWebSocketServerSession.handleGetRubUsdRate(
         if (usd != null) {
             val fetchedAt = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
             val resultEl = buildJsonObject {
-                put("base", kotlinx.serialization.json.JsonPrimitive("RUB"))
-                put("symbol", kotlinx.serialization.json.JsonPrimitive("USD"))
-                put("rate", kotlinx.serialization.json.JsonPrimitive(usd))
-                put("fetchedAt", kotlinx.serialization.json.JsonPrimitive(fetchedAt))
-                put("source", kotlinx.serialization.json.JsonPrimitive(url))
+                put("base", JsonPrimitive("RUB"))
+                put("symbol", JsonPrimitive("USD"))
+                put("rate", JsonPrimitive(usd))
+                put("fetchedAt", JsonPrimitive(fetchedAt))
+                put("source", JsonPrimitive(url))
             }
             respondResult(json, req.id, resultEl, logger)
         } else {
@@ -340,8 +482,8 @@ private suspend fun DefaultWebSocketServerSession.handleEcho(
         return
     }
     val resultEl = buildJsonObject {
-        put("text", kotlinx.serialization.json.JsonPrimitive(text))
-        put("length", kotlinx.serialization.json.JsonPrimitive(text.length))
+        put("text", JsonPrimitive(text))
+        put("length", JsonPrimitive(text.length))
     }
     respondResult(json, req.id, resultEl, logger)
 }
@@ -358,7 +500,7 @@ private suspend fun DefaultWebSocketServerSession.handleSum(
         respondError(json, req.id, -32602, "Invalid params: 'a' and 'b' numbers are required", logger)
         return
     }
-    val resultEl = buildJsonObject { put("result", kotlinx.serialization.json.JsonPrimitive(a + b)) }
+    val resultEl = buildJsonObject { put("result", JsonPrimitive(a + b)) }
     respondResult(json, req.id, resultEl, logger)
 }
 
@@ -433,6 +575,261 @@ private suspend fun DefaultWebSocketServerSession.handleGithubListMyRepos(
         respondError(json, req.id, response.status.value, "GitHub API error (${response.status.value}): $body", logger)
     }
 }
+
+// ======= НОВЫЕ ЛОКАЛЬНЫЕ ОБРАБОТЧИКИ =======
+
+private suspend fun DefaultWebSocketServerSession.handleWorkspaceSearchInFiles(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val rootPathStr = args?.get("root_path")?.jsonPrimitive?.content
+    val regexStr = args?.get("regex")?.jsonPrimitive?.content
+    if (rootPathStr.isNullOrBlank() || regexStr.isNullOrBlank()) {
+        respondError(json, req.id, -32602, "Invalid params: 'root_path' and 'regex' are required", logger)
+        return
+    }
+    val includeContent = args["include_content"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
+    val contextLines = args["context_lines"]?.jsonPrimitive?.intOrNull ?: 0
+    val maxBytes = args["max_bytes_per_file"]?.jsonPrimitive?.intOrNull ?: 1_048_576
+
+    val globArr = args["glob"]?.jsonArray
+    val globs = globArr?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+
+    val root = Paths.get(rootPathStr).normalize()
+    if (!Files.exists(root) || !Files.isDirectory(root)) {
+        respondError(json, req.id, -32602, "root_path is not a directory: $rootPathStr", logger)
+        return
+    }
+
+    val matchers: List<PathMatcher> = globs.map { pattern ->
+        FileSystems.getDefault().getPathMatcher("glob:$pattern")
+    }
+
+    val compiled = Pattern.compile(regexStr)
+    val matchesJson = buildJsonArray {
+        Files.walk(root).use { stream ->
+            stream.asSequence()
+                .filter { Files.isRegularFile(it) }
+                .filter { !it.toString().contains("${FileSystems.getDefault().separator}.git${FileSystems.getDefault().separator}") }
+                .filter { path ->
+                    if (matchers.isEmpty()) true
+                    else {
+                        val rel = root.relativize(path).toString().replace('\\', '/')
+                        matchers.any { m ->
+                            // Сопоставление по относительному пути
+                            m.matches(Paths.get(rel)) || m.matches(Paths.get("./$rel"))
+                        }
+                    }
+                }
+                .forEach { path ->
+                    val size = runCatching { Files.size(path) }.getOrDefault(Long.MAX_VALUE)
+                    if (size > maxBytes) return@forEach
+                    val content = runCatching { Files.readAllLines(path, StandardCharsets.UTF_8) }.getOrNull() ?: return@forEach
+                    content.forEachIndexed { idx, line ->
+                        val matcher = compiled.matcher(line)
+                        if (matcher.find()) {
+                            val lineNum = idx + 1
+                            val before =
+                                if (includeContent && contextLines > 0) content.subList(maxOf(0, idx - contextLines), idx) else emptyList()
+                            val after =
+                                if (includeContent && contextLines > 0) content.subList(minOf(content.size, idx + 1), minOf(content.size, idx + 1 + contextLines)) else emptyList()
+
+                            add(
+                                buildJsonObject {
+                                    put("file", JsonPrimitive(path.toString()))
+                                    put("line", JsonPrimitive(lineNum))
+                                    put("text", JsonPrimitive(line))
+                                    if (includeContent && contextLines > 0) {
+                                        put("before", json.encodeToJsonElement(before))
+                                        put("after", json.encodeToJsonElement(after))
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+        }
+    }
+
+    val resultEl = buildJsonObject {
+        put("matches", matchesJson)
+    }
+    respondResult(json, req.id, resultEl, logger)
+}
+
+private suspend fun DefaultWebSocketServerSession.handleWorkspaceWriteText(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val pathStr = args?.get("path")?.jsonPrimitive?.content
+    val contentStr = args?.get("content")?.jsonPrimitive?.content
+    val createDirs = args?.get("create_dirs")?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
+    val overwrite = args?.get("overwrite")?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
+
+    if (pathStr.isNullOrBlank() || contentStr == null) {
+        respondError(json, req.id, -32602, "Invalid params: 'path' and 'content' are required", logger)
+        return
+    }
+
+    val p: Path = Paths.get(pathStr).normalize()
+    if (createDirs) {
+        val parent = p.parent
+        if (parent != null) {
+            runCatching { Files.createDirectories(parent) }.onFailure {
+                respondError(json, req.id, -32001, "Failed to create directories: ${it.message}", logger)
+                return
+            }
+        }
+    }
+    if (!overwrite && Files.exists(p)) {
+        respondError(json, req.id, -32002, "File already exists and overwrite=false: $p", logger)
+        return
+    }
+
+    val written = runCatching {
+        val bytes = contentStr.toByteArray(StandardCharsets.UTF_8)
+        Files.write(
+            p,
+            bytes,
+            StandardOpenOption.CREATE,
+            if (overwrite) StandardOpenOption.TRUNCATE_EXISTING else StandardOpenOption.CREATE_NEW,
+            StandardOpenOption.WRITE
+        )
+        bytes.size
+    }.getOrElse {
+        respondError(json, req.id, -32003, "Write failed: ${it.message}", logger)
+        return
+    }
+
+    val resultEl = buildJsonObject {
+        put("path", JsonPrimitive(p.toString()))
+        put("bytes_written", JsonPrimitive(written))
+    }
+    respondResult(json, req.id, resultEl, logger)
+}
+
+private suspend fun DefaultWebSocketServerSession.handleTextopsExtractTodos(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val items = args?.get("items")?.jsonArray
+    if (items == null) {
+        respondError(json, req.id, -32602, "Invalid params: 'items' array is required", logger)
+        return
+    }
+    val patterns = args["patterns"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: listOf("TODO", "FIXME")
+    val patternRegex = Pattern.compile(patterns.joinToString("|") { Pattern.quote(it) }, Pattern.CASE_INSENSITIVE)
+
+    data class Task(val title: String, val priority: String?, val tags: List<String>, val sourceFile: String, val line: Int, val dueDate: String?)
+
+    fun inferPriority(text: String): String? {
+        val t = text.lowercase()
+        return when {
+            Regex("""\b(p0|urgent|asap)\b""").containsMatchIn(t) -> "high"
+            Regex("""\b(p1|soon|important)\b""").containsMatchIn(t) -> "medium"
+            Regex("""\b(p2|later|low)\b""").containsMatchIn(t) -> "low"
+            else -> null
+        }
+    }
+
+    fun inferTags(text: String): List<String> {
+        val tags = mutableListOf<String>()
+        Regex("""\[(bug|refactor|doc|feature|test|perf)\]""", RegexOption.IGNORE_CASE).findAll(text).forEach {
+            tags.add(it.groupValues[1].lowercase())
+        }
+        if (Regex("""\bfixme\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)) tags.add("fixme")
+        if (Regex("""\btodo\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)) tags.add("todo")
+        return tags.distinct()
+    }
+
+    val tasks = buildJsonArray {
+        items.forEach { el ->
+            val obj = el.jsonObject
+            val file = obj["file"]?.jsonPrimitive?.content ?: return@forEach
+            val line = obj["line"]?.jsonPrimitive?.intOrNull ?: 0
+            val text = obj["text"]?.jsonPrimitive?.content ?: return@forEach
+
+            if (!patternRegex.matcher(text).find()) return@forEach
+
+            val title = text.replace(Regex("""^\s*(//+|#|-|\*)\s*"""), "").trim()
+            val priority = inferPriority(text)
+            val tags = inferTags(text)
+            add(
+                buildJsonObject {
+                    put("title", JsonPrimitive(title))
+                    if (priority != null) put("priority", JsonPrimitive(priority))
+                    put("tags", json.encodeToJsonElement(tags))
+                    put("source_file", JsonPrimitive(file))
+                    put("line", JsonPrimitive(line))
+                }
+            )
+        }
+    }
+
+    val resultEl = buildJsonObject {
+        put("tasks", tasks)
+    }
+    respondResult(json, req.id, resultEl, logger)
+}
+
+private suspend fun DefaultWebSocketServerSession.handleMathopsAggregateTasks(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val tasks = args?.get("tasks")?.jsonArray
+    if (tasks == null) {
+        respondError(json, req.id, -32602, "Invalid params: 'tasks' array is required", logger)
+        return
+    }
+
+    var all = 0
+    var high = 0
+    var medium = 0
+    var low = 0
+    val byTag = mutableMapOf<String, Int>()
+
+    tasks.forEach { el ->
+        all++
+        val obj = el.jsonObject
+        when (obj["priority"]?.jsonPrimitive?.content?.lowercase()) {
+            "high" -> high++
+            "medium" -> medium++
+            "low" -> low++
+        }
+        val tags = obj["tags"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        tags.forEach { tag -> byTag[tag] = (byTag[tag] ?: 0) + 1 }
+    }
+
+    fun pct(x: Int): Double = if (all == 0) 0.0 else (x.toDouble() / all.toDouble()) * 100.0
+
+    val resultEl = buildJsonObject {
+        put("totals", buildJsonObject {
+            put("all", JsonPrimitive(all))
+            put("high", JsonPrimitive(high))
+            put("medium", JsonPrimitive(medium))
+            put("low", JsonPrimitive(low))
+        })
+        put("by_tag", json.encodeToJsonElement(byTag))
+        put("distribution", buildJsonObject {
+            put("priority_pct", buildJsonObject {
+                put("high", JsonPrimitive(pct(high)))
+                put("medium", JsonPrimitive(pct(medium)))
+                put("low", JsonPrimitive(pct(low)))
+            })
+        })
+    }
+    respondResult(json, req.id, resultEl, logger)
+}
+
+// ======= ОБЩИЕ УТИЛИТЫ ОТВЕТА =======
 
 private suspend fun DefaultWebSocketServerSession.respondResult(
     json: Json,

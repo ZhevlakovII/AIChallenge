@@ -191,6 +191,24 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
             name = "uuid",
             description = "Генерация случайного UUID v4",
             inputSchema = null
+        ),
+        McpToolDTO(
+            name = "chrono.date_range",
+            description = "Вычисляет диапазон дат по пресету (today|yesterday|last_7_days)",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Date range (preset)",
+                  "properties": {
+                    "preset": { "type": "string", "enum": ["today","yesterday","last_7_days"] },
+                    "tz": { "type": "string", "description": "IANA time zone, e.g. Europe/Moscow", "default": "system" }
+                  },
+                  "required": ["preset"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
         )
     )
 }
@@ -288,6 +306,45 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
         "uuid" -> {
             val value = UUID.randomUUID().toString()
             val resultEl = buildJsonObject { put("uuid", kotlinx.serialization.json.JsonPrimitive(value)) }
+            respondResult(json, req.id, resultEl, logger)
+        }
+
+        "chrono.date_range" -> {
+            val preset = args?.get("preset")?.jsonPrimitive?.content
+            val tzStr = args?.get("tz")?.jsonPrimitive?.content
+            val zone = runCatching { if (tzStr.isNullOrBlank() || tzStr == "system") java.time.ZoneId.systemDefault() else java.time.ZoneId.of(tzStr) }.getOrDefault(java.time.ZoneId.systemDefault())
+
+            fun startOfDay(d: java.time.LocalDate) = d.atStartOfDay(zone).toInstant()
+            val (start, end, label) = when (preset) {
+                "today" -> {
+                    val today = java.time.LocalDate.now(zone)
+                    val s = startOfDay(today)
+                    val e = startOfDay(today.plusDays(1)).minusMillis(1)
+                    Triple(s, e, today.toString())
+                }
+                "yesterday" -> {
+                    val y = java.time.LocalDate.now(zone).minusDays(1)
+                    val s = startOfDay(y)
+                    val e = startOfDay(y.plusDays(1)).minusMillis(1)
+                    Triple(s, e, y.toString())
+                }
+                "last_7_days" -> {
+                    val endDate = java.time.LocalDate.now(zone)
+                    val startDate = endDate.minusDays(6)
+                    val s = startOfDay(startDate)
+                    val e = startOfDay(endDate.plusDays(1)).minusMillis(1)
+                    Triple(s, e, "last_7_days")
+                }
+                else -> {
+                    respondError(json, req.id, -32602, "Invalid params: 'preset' must be one of today|yesterday|last_7_days", logger)
+                    return
+                }
+            }
+            val resultEl = buildJsonObject {
+                put("start_iso", kotlinx.serialization.json.JsonPrimitive(java.time.format.DateTimeFormatter.ISO_INSTANT.format(start)))
+                put("end_iso", kotlinx.serialization.json.JsonPrimitive(java.time.format.DateTimeFormatter.ISO_INSTANT.format(end)))
+                put("label", kotlinx.serialization.json.JsonPrimitive(label))
+            }
             respondResult(json, req.id, resultEl, logger)
         }
 

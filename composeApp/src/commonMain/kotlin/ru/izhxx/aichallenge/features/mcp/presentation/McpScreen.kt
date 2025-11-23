@@ -72,27 +72,37 @@ fun McpScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(
-                onClick = { viewModel.onEvent(McpEvent.SaveServers) },
-                enabled = !state.loading
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Сохранить URL-ы")
+                Button(
+                    onClick = { viewModel.onEvent(McpEvent.SaveServers) },
+                    enabled = !state.loading
+                ) {
+                    Text("Сохранить URL-ы")
+                }
+                Button(
+                    onClick = { viewModel.onEvent(McpEvent.CheckConnections) },
+                    enabled = !state.loading
+                ) {
+                    Text("Проверить соединения")
+                }
             }
-            Button(
-                onClick = { viewModel.onEvent(McpEvent.CheckConnections) },
-                enabled = !state.loading
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Проверить соединения")
-            }
-            Button(
-                onClick = { viewModel.onEvent(McpEvent.LoadToolsUnion) },
-                enabled = !state.loading
-            ) {
-                Text("Загрузить инструменты")
+                Button(
+                    onClick = { viewModel.onEvent(McpEvent.LoadToolsUnion) },
+                    enabled = !state.loading
+                ) {
+                    Text("Загрузить инструменты")
+                }
             }
         }
 
@@ -119,7 +129,9 @@ fun McpScreen(
             state.tools.isEmpty() -> Text("Инструменты не найдены")
             else -> {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
                 ) {
                     items(state.tools) { tool ->
                         Column(
