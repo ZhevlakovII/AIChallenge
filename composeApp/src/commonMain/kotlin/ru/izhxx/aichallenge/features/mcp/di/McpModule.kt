@@ -14,8 +14,8 @@ val mcpModule: Module = module {
         McpViewModel(
             getMcpTools = get(),
             ensureConnected = get(),
-            getSavedUrl = get(),
-            saveUrl = get()
+            getServers = get(),
+            saveServers = get()
         )
     }
 }

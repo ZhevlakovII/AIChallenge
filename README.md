@@ -11,8 +11,8 @@ This is a Kotlin Multiplatform project targeting Android, Desktop (JVM), Server.
 
 * [/server](./server/src/main/kotlin) is for the Ktor server application.
 
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
+* [/shared](shared/sharedold/src) is for the code that will be shared between all targets in the project.
+  The most important subfolder is [commonMain](shared/sharedold/src/commonMain/kotlin). If preferred, you
   can add code to the platform-specific folders here too.
 
 ### Build and Run Android Application

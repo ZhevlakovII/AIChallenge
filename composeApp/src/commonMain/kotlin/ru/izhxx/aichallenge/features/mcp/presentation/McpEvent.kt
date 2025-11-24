@@ -2,25 +2,16 @@ package ru.izhxx.aichallenge.features.mcp.presentation
 
 /**
  * События экрана MCP (MVI Intent).
+ *
+ * Поддержка двух MCP-серверов (минимальный UI без динамического списка).
  */
 sealed interface McpEvent {
-    /**
-     * Пользователь изменил URL MCP WebSocket.
-     */
-    data class UrlChanged(val value: String) : McpEvent
+    // Server #1
+    data class Url1Changed(val value: String) : McpEvent
+    data object SaveServers : McpEvent
+    data object CheckConnections : McpEvent
+    data object LoadToolsUnion : McpEvent
 
-    /**
-     * Сохранить текущий URL в настройки.
-     */
-    data object SaveUrl : McpEvent
-
-    /**
-     * Проверить соединение с MCP-сервером (и обновить флаг connected).
-     */
-    data object CheckConnection : McpEvent
-
-    /**
-     * Загрузить инструменты (внутри выполняет проверку соединения).
-     */
-    data object Load : McpEvent
+    // Server #2
+    data class Url2Changed(val value: String) : McpEvent
 }
