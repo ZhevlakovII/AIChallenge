@@ -18,6 +18,9 @@ import ru.izhxx.aichallenge.rag.docindexer.fs.FsContentReaderJvm
 import ru.izhxx.aichallenge.rag.docindexer.fs.JsonIndexWriter
 import ru.izhxx.aichallenge.rag.docindexer.fs.Sha256Hasher
 import ru.izhxx.aichallenge.rag.docindexer.ollama.OllamaEmbedder
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * CLI для построения локального JSON-индекса .md документов с эмбеддингами из Ollama.
@@ -69,6 +72,10 @@ fun main(vararg args: String) = runBlocking {
     )
     val hasher = Sha256Hasher()
 
+    val root = findProjectRoot()
+    val inputAbs = resolveAgainstRoot(root, cfg.inputDir).toString()
+    val outAbs = resolveAgainstRoot(root, cfg.out).toString()
+
     val params = BuildParams(
         targetTokens = cfg.targetTokens,
         overlapTokens = cfg.overlapTokens,
@@ -78,7 +85,7 @@ fun main(vararg args: String) = runBlocking {
         concurrency = cfg.concurrency
     )
     val request = BuildRequest(
-        inputDir = cfg.inputDir,
+        inputDir = inputAbs,
         params = params,
         model = ModelConfig(
             name = cfg.model,
@@ -87,8 +94,8 @@ fun main(vararg args: String) = runBlocking {
     )
 
     println("doc-indexer: start build")
-    println("- inputDir      = ${cfg.inputDir}")
-    println("- out           = ${cfg.out}")
+    println("- inputDir      = ${cfg.inputDir} -> ${inputAbs}")
+    println("- out           = ${cfg.out} -> ${outAbs}")
     println("- model         = ${cfg.model}")
     println("- ollamaUrl     = ${cfg.ollamaUrl}")
     println("- targetTokens  = ${cfg.targetTokens}  (maxChars=$maxChars)")
@@ -102,7 +109,7 @@ fun main(vararg args: String) = runBlocking {
         hasher = hasher
     ).build(request)
 
-    JsonIndexWriter(pretty = false).write(index, cfg.out)
+    JsonIndexWriter(pretty = false).write(index, outAbs)
 
     println("doc-indexer: done")
     println("- docs   = ${index.stats.docs}")
@@ -188,6 +195,23 @@ private fun parseArgs(args: List<String>): CliConfig {
         initialBackoffMs = initialBackoffMs,
         verbose = verbose
     )
+}
+
+private fun findProjectRoot(): Path {
+    val start = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize()
+    var cur = start
+    while (true) {
+        if (Files.exists(cur.resolve("settings.gradle.kts")) || Files.exists(cur.resolve(".git"))) {
+            return cur
+        }
+        val parent = cur.parent ?: return start
+        cur = parent
+    }
+}
+
+private fun resolveAgainstRoot(root: Path, path: String): Path {
+    val p = Paths.get(path)
+    return if (p.isAbsolute) p.normalize() else root.resolve(path).normalize()
 }
 
 private fun printUsage() {

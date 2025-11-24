@@ -91,7 +91,7 @@ CLI запускается из модуля app:
 ./gradlew :rag:doc-indexer:app:run --args '\
   build \
   --input-dir "./memory-bank" \
-  --out "./rag/index.json" \
+  --out "./rag/out/index.json" \
   --target-tokens 400 \
   --overlap-tokens 80 \
   --chars-per-token 3.0 \
@@ -99,6 +99,10 @@ CLI запускается из модуля app:
   --ollama-url "http://localhost:11434" \
   --model "mxbai-embed-large"'
 ```
+
+Примечание о путях:
+- CLI автоматически определяет корень репозитория, поднимаясь от текущей рабочей директории до директории, где есть settings.gradle.kts или .git.
+- Все относительные пути (--input-dir, --out) резолвятся относительно корня репозитория, поэтому команды можно вызывать из любого подпроекта.
 
 Параметры:
 - --input-dir: корень сканирования .md
@@ -113,9 +117,9 @@ CLI запускается из модуля app:
 
 Примеры:
 - Индексация локальной папки docs:
-  ./gradlew :rag:doc-indexer:app:run --args 'build --input-dir "./docs" --out "./rag/index.json"'
+  ./gradlew :rag:doc-indexer:app:run --args 'build --input-dir "./docs" --out "./rag/out/index.json"'
 - Если Ollama работает на Windows‑машине в сети:
-  ./gradlew :rag:doc-indexer:app:run --args 'build --input-dir "./memory-bank" --out "./rag/index.json" --ollama-url "http://192.168.1.50:11434"'
+  ./gradlew :rag:doc-indexer:app:run --args 'build --input-dir "./memory-bank" --out "./rag/out/index.json" --ollama-url "http://192.168.1.50:11434"'
 
 Важно:
 - На хосте с Ollama должно быть выполнено:
