@@ -1,8 +1,8 @@
 package ru.izhxx.aichallenge.rag.docindexer.core.model
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 @Serializable
 data class Chunk(
@@ -65,6 +65,7 @@ data class DocumentIndex(
     val stats: IndexStats
 ) {
     companion object {
+        @OptIn(ExperimentalTime::class)
         fun nowIso(): String = Clock.System.now().toString() // ISO-8601
     }
 }

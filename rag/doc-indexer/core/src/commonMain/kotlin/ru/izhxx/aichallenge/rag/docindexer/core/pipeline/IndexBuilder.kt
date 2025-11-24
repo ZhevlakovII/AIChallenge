@@ -1,10 +1,10 @@
 package ru.izhxx.aichallenge.rag.docindexer.core.pipeline
 
-import kotlinx.coroutines.Semaphore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import ru.izhxx.aichallenge.rag.docindexer.core.api.ContentReader
 import ru.izhxx.aichallenge.rag.docindexer.core.api.Embedder
 import ru.izhxx.aichallenge.rag.docindexer.core.api.Hasher
@@ -18,6 +18,8 @@ import ru.izhxx.aichallenge.rag.docindexer.core.model.IndexStats
 import ru.izhxx.aichallenge.rag.docindexer.core.model.ModelConfig
 import ru.izhxx.aichallenge.rag.docindexer.core.model.SourceConfig
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class IndexBuilder(
     private val reader: ContentReader,
@@ -28,8 +30,9 @@ class IndexBuilder(
     /**
      * Основная сборка индекса.
      */
+    @OptIn(ExperimentalTime::class)
     suspend fun build(request: BuildRequest): DocumentIndex {
-        val startNs = System.nanoTime()
+        val startNs = Clock.System.now().nanosecondsOfSecond
 
         val inputDir = request.inputDir
         val params = request.params
@@ -86,7 +89,7 @@ class IndexBuilder(
 
         val avgLen = if (totalChunks > 0) totalChunkLen.toDouble() / totalChunks else 0.0
 
-        val elapsedMs = (System.nanoTime() - startNs) / 1_000_000
+        val elapsedMs = (Clock.System.now().nanosecondsOfSecond - startNs) / 1_000_000
 
         return DocumentIndex(
             version = "1",
@@ -99,7 +102,7 @@ class IndexBuilder(
                 docs = docs.size,
                 chunks = totalChunks,
                 avgChunkLen = avgLen,
-                elapsedMs = elapsedMs
+                elapsedMs = elapsedMs.toLong()
             )
         )
     }
