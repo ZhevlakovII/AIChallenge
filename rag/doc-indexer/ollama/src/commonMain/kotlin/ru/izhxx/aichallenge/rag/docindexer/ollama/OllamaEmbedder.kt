@@ -30,7 +30,9 @@ class OllamaEmbedder(
     @Serializable
     private data class EmbeddingRequest(
         val model: String,
-        val input: String
+        val prompt: String? = null,
+        val input: String? = null,
+        val inputs: List<String>? = null
     )
 
     @Serializable
@@ -40,7 +42,9 @@ class OllamaEmbedder(
         // некоторые реализации используют поле "embeddings" для батча
         val embeddings: List<List<Double>>? = null,
         // на случай других расширений API
-        val data: List<EmbeddingData>? = null
+        val data: List<EmbeddingData>? = null,
+        val error: String? = null,
+        val message: String? = null
     )
 
     @Serializable
@@ -54,23 +58,33 @@ class OllamaEmbedder(
         var backoff = initialBackoffMs
         var lastError: Throwable? = null
 
+        suspend fun request(body: EmbeddingRequest): EmbeddingResponse {
+            return http.post("$baseUrl/api/embeddings") {
+                contentType(ContentType.Application.Json)
+                setBody(body)
+            }.body()
+        }
+
+        fun extract(resp: EmbeddingResponse): List<Double>? {
+            if (resp.error != null || resp.message != null) {
+                throw IllegalStateException("Ollama error: ${resp.error ?: resp.message}")
+            }
+            resp.embedding?.let { if (it.isNotEmpty()) return it }
+            resp.embeddings?.firstOrNull()?.let { if (it.isNotEmpty()) return it }
+            resp.data?.firstOrNull()?.embedding?.let { if (it.isNotEmpty()) return it }
+            return null
+        }
+
         while (attempt <= retries) {
             try {
-                val resp: EmbeddingResponse = http.post("$baseUrl/api/embeddings") {
-                    contentType(ContentType.Application.Json)
-                    setBody(EmbeddingRequest(model = model, input = text))
-                }.body()
+                // 1) prompt
+                extract(request(EmbeddingRequest(model = model, prompt = text)))?.let { return it }
+                // 2) input (string)
+                extract(request(EmbeddingRequest(model = model, input = text)))?.let { return it }
+                // 3) inputs (array)
+                extract(request(EmbeddingRequest(model = model, inputs = listOf(text))))?.let { return it }
 
-                // 1) одиночное поле "embedding"
-                resp.embedding?.let { return it }
-
-                // 2) "embeddings": [[...]] — берём первый
-                resp.embeddings?.firstOrNull()?.let { return it }
-
-                // 3) "data": [{"embedding": [...]}]
-                resp.data?.firstOrNull()?.embedding?.let { return it }
-
-                error("Ollama embeddings response doesn't contain embedding(s)")
+                error("Ollama embeddings response doesn't contain embedding(s) or returned empty vector")
             } catch (t: Throwable) {
                 lastError = t
                 if (attempt == retries) break

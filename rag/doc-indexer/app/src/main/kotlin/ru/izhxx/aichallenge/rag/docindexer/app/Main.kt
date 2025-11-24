@@ -57,7 +57,7 @@ fun main(vararg args: String) = runBlocking {
             )
         }
         install(Logging) {
-            level = if (cfg.verbose) LogLevel.INFO else LogLevel.NONE
+            level = if (cfg.verbose) LogLevel.BODY else LogLevel.NONE
         }
     }
 
