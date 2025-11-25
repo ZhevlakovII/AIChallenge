@@ -343,6 +343,120 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ============ RAG НАСТРОЙКИ ============
+                Text(
+                    text = "RAG (Retrieval-Augmented Generation)",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Text(
+                    text = "Включите RAG и укажите путь к JSON-индексу, созданному doc-indexer. При включении RAG запросы будут дополняться релевантным контекстом из индекса.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Переключатель RAG
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Включить RAG",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = state.ragEnabled,
+                        onCheckedChange = { viewModel.updateRagEnabled(it) },
+                        enabled = !state.isLoading
+                    )
+                }
+
+                // Путь к индексу
+                OutlinedTextField(
+                    value = state.ragIndexPath,
+                    onValueChange = { viewModel.updateRagIndexPath(it) },
+                    label = { Text("Путь к индексу (JSON)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading && state.ragEnabled,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Next
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Параметры ретрива
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Top-K
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "RAG Top-K",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = state.ragTopK,
+                            onValueChange = { viewModel.updateRagTopK(it) },
+                            label = { Text("Top-K") },
+                            enabled = !state.isLoading && state.ragEnabled,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Min Score
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "RAG Min score (0.0 - 1.0)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = state.ragMinScore,
+                            onValueChange = { viewModel.updateRagMinScore(it) },
+                            label = { Text("Min score") },
+                            enabled = !state.isLoading && state.ragEnabled,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Max context tokens
+                Text(
+                    text = "RAG Max context tokens",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedTextField(
+                    value = state.ragMaxContextTokens,
+                    onValueChange = { viewModel.updateRagMaxContextTokens(it) },
+                    label = { Text("Max context tokens") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading && state.ragEnabled,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Секция системного промпта
                 Text(
                     text = "Системный промпт",

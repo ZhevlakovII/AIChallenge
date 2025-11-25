@@ -9,6 +9,8 @@ import ru.izhxx.aichallenge.features.chat.domain.usecase.CheckApiKeyConfiguratio
 import ru.izhxx.aichallenge.features.chat.domain.usecase.CheckApiKeyConfigurationUseCaseImpl
 import ru.izhxx.aichallenge.features.chat.domain.usecase.SendMessageUseCase
 import ru.izhxx.aichallenge.features.chat.domain.usecase.SendMessageUseCaseImpl
+import ru.izhxx.aichallenge.features.chat.domain.usecase.CompareMessageUseCase
+import ru.izhxx.aichallenge.features.chat.domain.usecase.CompareMessageUseCaseImpl
 import ru.izhxx.aichallenge.features.chat.presentation.ChatViewModel
 import ru.izhxx.aichallenge.features.chat.presentation.mapper.ChatResponseMapper
 
@@ -22,6 +24,7 @@ val chatModule: Module = module {
     // UseCase
     factoryOf(::SendMessageUseCaseImpl) bind SendMessageUseCase::class
     factoryOf(::CheckApiKeyConfigurationUseCaseImpl) bind CheckApiKeyConfigurationUseCase::class
+    factoryOf(::CompareMessageUseCaseImpl) bind CompareMessageUseCase::class
 
     // ViewModel
     viewModel { 
@@ -37,7 +40,8 @@ val chatModule: Module = module {
             getSavedMcpUrlUseCase = get(),
             getGithubUserReposUseCase = get(),
             getMyGithubReposUseCase = get(),
-            getMcpToolsUseCase = get()
+            getMcpToolsUseCase = get(),
+            compareMessageUseCase = get()
         )
     }
 }

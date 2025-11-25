@@ -1,4 +1,4 @@
-import org.gradle.kotlin.dsl.implementation
+
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -42,6 +42,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.kotlinx.datetime)
             implementation(projects.shared.sharedold)
+            implementation(projects.rag.docIndexer.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

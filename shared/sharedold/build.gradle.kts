@@ -53,6 +53,10 @@ kotlin {
             // Room
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
+
+            // RAG: reuse doc-indexer core models and Ollama embedder
+            implementation(projects.rag.docIndexer.core)
+            implementation(projects.rag.docIndexer.ollama)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

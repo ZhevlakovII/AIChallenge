@@ -12,12 +12,20 @@ import ru.izhxx.aichallenge.data.api.OpenAIApi
 import ru.izhxx.aichallenge.data.api.OpenAIApiImpl
 import ru.izhxx.aichallenge.data.database.AppDatabase
 import ru.izhxx.aichallenge.data.database.DatabaseFactory
+import ru.izhxx.aichallenge.data.rag.DefaultRagRetriever
+import ru.izhxx.aichallenge.data.rag.RagIndexRepositoryImpl
+import ru.izhxx.aichallenge.data.rag.RagOllamaEmbedder
+import ru.izhxx.aichallenge.data.rag.RagSettingsRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.DialogPersistenceRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.LLMClientRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.LLMConfigRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.ProviderSettingsRepositoryImpl
 import ru.izhxx.aichallenge.data.repository.ReminderRepositoryImpl
 import ru.izhxx.aichallenge.data.usecase.ExecuteReminderTaskUseCaseImpl
+import ru.izhxx.aichallenge.domain.rag.RagEmbedder
+import ru.izhxx.aichallenge.domain.rag.RagIndexRepository
+import ru.izhxx.aichallenge.domain.rag.RagRetriever
+import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
 import ru.izhxx.aichallenge.domain.repository.DialogPersistenceRepository
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
@@ -80,6 +88,19 @@ val sharedModule = module {
             dataStore = DataStoreProvider.providePreferencesDataStore("llm_provider_settings.preferences_pb")
         )
     }
+
+    // RAG settings
+    single<RagSettingsRepository> {
+        RagSettingsRepositoryImpl(
+            dataStore = DataStoreProvider.providePreferencesDataStore("rag_settings.preferences_pb")
+        )
+    }
+    // RAG index repository (in-memory cache)
+    single<RagIndexRepository> { RagIndexRepositoryImpl(get()) }
+    // RAG embedder (Ollama)
+    single<RagEmbedder> { RagOllamaEmbedder(get()) }
+    // RAG retriever (cosine kNN)
+    single<RagRetriever> { DefaultRagRetriever() }
 
     single<AppDatabase> {
         DatabaseFactory.getDatabase()

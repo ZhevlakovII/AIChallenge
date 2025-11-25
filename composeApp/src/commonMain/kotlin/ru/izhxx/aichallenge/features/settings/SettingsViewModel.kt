@@ -13,6 +13,8 @@ import ru.izhxx.aichallenge.domain.model.config.ResponseFormat
 import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
 import ru.izhxx.aichallenge.features.settings.state.SettingsState
+import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
+import ru.izhxx.aichallenge.domain.rag.RagSettings
 
 /**
  * ViewModel для экрана настроек
@@ -20,6 +22,7 @@ import ru.izhxx.aichallenge.features.settings.state.SettingsState
 class SettingsViewModel(
     private val providerSettingsStore: ProviderSettingsRepository,
     private val lLMConfigRepository: LLMConfigRepository,
+    private val ragSettingsRepository: RagSettingsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -37,6 +40,7 @@ class SettingsViewModel(
             try {
                 val providerSettings = providerSettingsStore.getSettings()
                 val lLMConfig = lLMConfigRepository.getSettings()
+                val ragSettings = ragSettingsRepository.getSettings()
                 
                 _state.update { 
                     it.copy(
@@ -53,6 +57,12 @@ class SettingsViewModel(
                         topA = lLMConfig.topA.toString(),
                         seed = lLMConfig.seed.toString(),
                         enableMcpToolCalling = lLMConfig.enableMcpToolCalling,
+                        // RAG
+                        ragEnabled = ragSettings.enabled,
+                        ragIndexPath = ragSettings.indexPath.orEmpty(),
+                        ragTopK = ragSettings.topK.toString(),
+                        ragMinScore = ragSettings.minScore.toString(),
+                        ragMaxContextTokens = ragSettings.maxContextTokens.toString(),
                         isLoading = false
                     )
                 }
@@ -156,6 +166,23 @@ class SettingsViewModel(
      */
     fun updateEnableMcpToolCalling(enabled: Boolean) {
         _state.update { it.copy(enableMcpToolCalling = enabled) }
+    }
+
+    // ======== RAG setters ========
+    fun updateRagEnabled(enabled: Boolean) {
+        _state.update { it.copy(ragEnabled = enabled) }
+    }
+    fun updateRagIndexPath(path: String) {
+        _state.update { it.copy(ragIndexPath = path) }
+    }
+    fun updateRagTopK(value: String) {
+        _state.update { it.copy(ragTopK = value) }
+    }
+    fun updateRagMinScore(value: String) {
+        _state.update { it.copy(ragMinScore = value) }
+    }
+    fun updateRagMaxContextTokens(value: String) {
+        _state.update { it.copy(ragMaxContextTokens = value) }
     }
 
     /**
@@ -266,6 +293,29 @@ class SettingsViewModel(
             return
         }
 
+        // Валидация RAG (требуется только если включен)
+        if (currentState.ragEnabled) {
+            val ragTopKValue = currentState.ragTopK.toIntOrNull()
+            if (ragTopKValue == null || ragTopKValue <= 0) {
+                _state.update { it.copy(error = "RAG: Top-K должен быть положительным числом") }
+                return
+            }
+            val ragMinScoreValue = currentState.ragMinScore.toDoubleOrNull()
+            if (ragMinScoreValue == null || ragMinScoreValue < 0.0 || ragMinScoreValue > 1.0) {
+                _state.update { it.copy(error = "RAG: Min score должен быть числом от 0.0 до 1.0") }
+                return
+            }
+            val ragMaxCtxValue = currentState.ragMaxContextTokens.toIntOrNull()
+            if (ragMaxCtxValue == null || ragMaxCtxValue <= 0) {
+                _state.update { it.copy(error = "RAG: Max context tokens должен быть положительным числом") }
+                return
+            }
+            if (currentState.ragIndexPath.isBlank()) {
+                _state.update { it.copy(error = "RAG: путь к индексу не может быть пустым") }
+                return
+            }
+        }
+
         _state.update { it.copy(isLoading = true, isSaved = false, error = null) }
 
         val providerSettings = ProviderSettings(
@@ -287,10 +337,24 @@ class SettingsViewModel(
             enableMcpToolCalling = currentState.enableMcpToolCalling
         )
 
+        // Готовим RagSettings к сохранению (значения валидированы при включённом RAG)
+        val ragDefaults = RagSettings()
+        val ragTopKValue = currentState.ragTopK.toIntOrNull()
+        val ragMinScoreValue = currentState.ragMinScore.toDoubleOrNull()
+        val ragMaxCtxValue = currentState.ragMaxContextTokens.toIntOrNull()
+        val ragSettings = ragDefaults.copy(
+            enabled = currentState.ragEnabled,
+            indexPath = currentState.ragIndexPath.trim().ifBlank { null },
+            topK = ragTopKValue ?: ragDefaults.topK,
+            minScore = ragMinScoreValue ?: ragDefaults.minScore,
+            maxContextTokens = ragMaxCtxValue ?: ragDefaults.maxContextTokens
+        )
+
         viewModelScope.launch {
             try {
                 providerSettingsStore.saveSettings(providerSettings)
                 lLMConfigRepository.saveSettings(lLMConfig)
+                ragSettingsRepository.saveSettings(ragSettings)
                 _state.update {
                     it.copy(isLoading = false, isSaved = true)
                 }
@@ -327,6 +391,12 @@ class SettingsViewModel(
                 topA = defaultLLMConfig.topA.toString(),
                 seed = defaultLLMConfig.seed.toString(),
                 enableMcpToolCalling = defaultLLMConfig.enableMcpToolCalling,
+                // Сбрасываем RAG поля к дефолтам UI (не сохраняем автоматически)
+                ragEnabled = false,
+                ragIndexPath = "",
+                ragTopK = RagSettings().topK.toString(),
+                ragMinScore = RagSettings().minScore.toString(),
+                ragMaxContextTokens = RagSettings().maxContextTokens.toString(),
                 error = null
             )
         }

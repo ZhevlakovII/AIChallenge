@@ -33,6 +33,7 @@ import ru.izhxx.aichallenge.mcp.domain.usecase.GetSavedMcpUrlUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetGithubUserReposUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMyGithubReposUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpToolsUseCase
+import ru.izhxx.aichallenge.features.chat.domain.usecase.CompareMessageUseCase
 
 /**
  * ViewModel для экрана чата с использованием паттерна MVI
@@ -50,7 +51,8 @@ class ChatViewModel(
     private val getSavedMcpUrlUseCase: GetSavedMcpUrlUseCase,
     private val getGithubUserReposUseCase: GetGithubUserReposUseCase,
     private val getMyGithubReposUseCase: GetMyGithubReposUseCase,
-    private val getMcpToolsUseCase: GetMcpToolsUseCase
+    private val getMcpToolsUseCase: GetMcpToolsUseCase,
+    private val compareMessageUseCase: CompareMessageUseCase
 ) : ViewModel() {
 
     // Для логирования
@@ -498,6 +500,80 @@ class ChatViewModel(
      */
     private suspend fun handleMcpCommand(text: String): Boolean {
         val trimmed = text.trim()
+        // Команда сравнения ответов (не требует MCP)
+        if (trimmed.startsWith("/compare")) {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            val questionArg = trimmed.removePrefix("/compare").trim()
+            val questionText = if (questionArg.isNotBlank()) {
+                questionArg
+            } else {
+                messageHistory.value.lastOrNull { it.role == MessageRole.USER }?.content
+            }
+
+            if (questionText.isNullOrBlank()) {
+                val msg = responseMapper.createTechnicalUiMessage(
+                    "Команда /compare требует вопроса или наличия предыдущего пользовательского сообщения."
+                )
+                addUiMessage(msg)
+                _state.update { it.copy(isLoading = false) }
+                return true
+            }
+
+            try {
+                val res = compareMessageUseCase(questionText, messageHistory.value, currentSummary)
+                res.fold(
+                    onSuccess = { cmp ->
+                        val baselineText = cmp.baseline.choices.firstOrNull()?.rawMessage?.content.orEmpty()
+                        val ragText = cmp.rag.choices.firstOrNull()?.rawMessage?.content.orEmpty()
+                        fun usageStr(r: ru.izhxx.aichallenge.domain.model.response.LLMResponse): String {
+                            val u = r.usage
+                            return if (u == null) "нет метрик" else "prompt=${u.promptTokens}, completion=${u.completionTokens}, total=${u.totalTokens}, timeMs=${u.responseTimeMs}"
+                        }
+                        val chunks = if (cmp.usedChunks.isEmpty()) "—" else cmp.usedChunks.joinToString(", ")
+                        val summaryText = buildString {
+                            appendLine("Сравнение ответов (без RAG vs с RAG):")
+                            appendLine()
+                            appendLine("— Baseline:")
+                            appendLine(baselineText.ifBlank { "<пусто>" })
+                            appendLine()
+                            appendLine("Метрики baseline: ${usageStr(cmp.baseline)}")
+                            appendLine()
+                            appendLine("— RAG:")
+                            appendLine(ragText.ifBlank { "<пусто>" })
+                            appendLine()
+                            appendLine("Метрики RAG: ${usageStr(cmp.rag)}; retrievalTimeMs=${cmp.retrievalTimeMs}")
+                            appendLine("Использованные чанки: $chunks")
+                            appendLine()
+                            appendLine(if (cmp.usedChunks.isEmpty()) "Вывод: RAG не помог (релевантный контекст не найден)." else "Вывод: RAG использовал внешний контекст — ответ может быть точнее по данным из базы.")
+                        }
+                        addUiMessage(
+                            ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiMessage.AssistantMessage(
+                                id = java.util.UUID.randomUUID().toString(),
+                                content = ru.izhxx.aichallenge.features.chat.presentation.model.MessageContent.Plain(summaryText),
+                                metadata = null
+                            )
+                        )
+                        _state.update { it.copy(isLoading = false) }
+                    },
+                    onFailure = { e ->
+                        val msg = responseMapper.createTechnicalUiMessage(
+                            "Не удалось выполнить сравнение: ${e.message ?: "неизвестная ошибка"}"
+                        )
+                        addUiMessage(msg)
+                        _state.update { it.copy(isLoading = false) }
+                    }
+                )
+            } catch (e: Exception) {
+                val msg = responseMapper.createTechnicalUiMessage(
+                    "Ошибка при сравнении: ${e.message ?: "неизвестная ошибка"}"
+                )
+                addUiMessage(msg)
+                _state.update { it.copy(isLoading = false) }
+            }
+            return true
+        }
+
         val isRepos = trimmed.startsWith("/repos ")
         val isMyRepos = trimmed == "/myrepos"
         val isTools = trimmed == "/tools"
