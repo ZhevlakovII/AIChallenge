@@ -9,6 +9,9 @@ import ru.izhxx.aichallenge.domain.rag.RagEmbedder
 import ru.izhxx.aichallenge.domain.rag.RagIndexRepository
 import ru.izhxx.aichallenge.domain.rag.RagRetriever
 import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 /**
  * Результат сравнения ответов: без RAG и с RAG, плюс метрики ретрива.
@@ -37,6 +40,7 @@ class CompareMessageUseCaseImpl(
     private val ragRetriever: RagRetriever
 ) : CompareMessageUseCase {
 
+    @OptIn(ExperimentalTime::class)
     override suspend fun invoke(
         text: String,
         previousMessages: List<LLMMessage>,
@@ -72,7 +76,7 @@ class CompareMessageUseCaseImpl(
             }
         }
 
-        val startRetrieval = kotlin.system.getTimeMillis()
+        val startRetrieval = Clock.System.now().nanosecondsOfSecond
         val qEmbedding = try {
             ragEmbedder.embed(text)
         } catch (e: Throwable) {
@@ -84,7 +88,7 @@ class CompareMessageUseCaseImpl(
             topK = settings.topK,
             minScore = settings.minScore
         )
-        val retrievalTime = kotlin.system.getTimeMillis() - startRetrieval
+        val retrievalTime = Clock.System.now().nanosecondsOfSecond - startRetrieval
 
         val used = retrieved.map { "${it.path}#${it.chunkIndex}" }
 
@@ -112,7 +116,7 @@ class CompareMessageUseCaseImpl(
             CompareResult(
                 baseline = baselineRes,
                 rag = ragRes,
-                retrievalTimeMs = retrievalTime,
+                retrievalTimeMs = retrievalTime.toLong(),
                 usedChunks = used
             )
         )
