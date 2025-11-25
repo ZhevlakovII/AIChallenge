@@ -39,7 +39,7 @@ include(":composeApp")
 include(":shared:sharedold")
 
 // Auto-include discovered modules under target roots
-val targetRoots = listOf("frontend", "backend", "shared", "instances")
+val targetRoots = listOf("frontend", "backend", "shared", "instances", "rag")
 
 // Include modules from target roots
 targetRoots.forEach(::includeModulesUnder)
