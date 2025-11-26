@@ -1,5 +1,7 @@
 package ru.izhxx.aichallenge.core.logger
 
+import kotlin.concurrent.Volatile
+
 /**
  * Глобальная точка входа. Хранит конфигурацию как неизменяемый снимок.
  * Реализации (sink/formatter/providers) отделены и внедряются через LoggerConfig.

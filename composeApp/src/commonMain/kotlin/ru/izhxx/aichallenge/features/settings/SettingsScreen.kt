@@ -455,6 +455,214 @@ fun SettingsScreen(
                     )
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ===== Reranker (2-й этап) =====
+                Text(
+                    text = "Reranker (2-й этап)",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Индикатор режима
+                Text(
+                    text = if (state.ragEnabled) {
+                        val modeStr = when (state.ragRerankMode) {
+                            ru.izhxx.aichallenge.domain.rag.RerankMode.None -> "None"
+                            ru.izhxx.aichallenge.domain.rag.RerankMode.MMR -> "MMR"
+                            ru.izhxx.aichallenge.domain.rag.RerankMode.LLM -> "LLM"
+                        }
+                        "RAG: On  •  Rerank: $modeStr"
+                    } else {
+                        "RAG: Off"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Переключатель режима Rerank
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = state.ragRerankMode == ru.izhxx.aichallenge.domain.rag.RerankMode.None,
+                        onClick = { viewModel.updateRagRerankMode(ru.izhxx.aichallenge.domain.rag.RerankMode.None) },
+                        enabled = !state.isLoading && state.ragEnabled
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("None", style = MaterialTheme.typography.bodyMedium)
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = state.ragRerankMode == ru.izhxx.aichallenge.domain.rag.RerankMode.MMR,
+                        onClick = { viewModel.updateRagRerankMode(ru.izhxx.aichallenge.domain.rag.RerankMode.MMR) },
+                        enabled = !state.isLoading && state.ragEnabled
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("MMR", style = MaterialTheme.typography.bodyMedium)
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = state.ragRerankMode == ru.izhxx.aichallenge.domain.rag.RerankMode.LLM,
+                        onClick = { viewModel.updateRagRerankMode(ru.izhxx.aichallenge.domain.rag.RerankMode.LLM) },
+                        enabled = !state.isLoading && state.ragEnabled
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("LLM", style = MaterialTheme.typography.bodyMedium)
+                }
+
+                // Параметры MMR
+                if (state.ragRerankMode == ru.izhxx.aichallenge.domain.rag.RerankMode.MMR) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "candidateK",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedTextField(
+                                value = state.ragCandidateK,
+                                onValueChange = { viewModel.updateRagCandidateK(it) },
+                                label = { Text("candidateK") },
+                                enabled = !state.isLoading && state.ragEnabled,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = ImeAction.Next
+                                )
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "mmrLambda (0.0 - 1.0)",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedTextField(
+                                value = state.ragMmrLambda,
+                                onValueChange = { viewModel.updateRagMmrLambda(it) },
+                                label = { Text("mmrLambda") },
+                                enabled = !state.isLoading && state.ragEnabled,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Decimal,
+                                    imeAction = ImeAction.Next
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Cutoff режим
+                Text(
+                    text = "Cutoff режим",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = state.ragCutoffMode == ru.izhxx.aichallenge.domain.rag.CutoffMode.Static,
+                        onClick = { viewModel.updateRagCutoffMode(ru.izhxx.aichallenge.domain.rag.CutoffMode.Static) },
+                        enabled = !state.isLoading && state.ragEnabled
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Static", style = MaterialTheme.typography.bodyMedium)
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = state.ragCutoffMode == ru.izhxx.aichallenge.domain.rag.CutoffMode.Quantile,
+                        onClick = { viewModel.updateRagCutoffMode(ru.izhxx.aichallenge.domain.rag.CutoffMode.Quantile) },
+                        enabled = !state.isLoading && state.ragEnabled
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Quantile", style = MaterialTheme.typography.bodyMedium)
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(
+                        selected = state.ragCutoffMode == ru.izhxx.aichallenge.domain.rag.CutoffMode.ZScore,
+                        onClick = { viewModel.updateRagCutoffMode(ru.izhxx.aichallenge.domain.rag.CutoffMode.ZScore) },
+                        enabled = !state.isLoading && state.ragEnabled
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Z‑Score", style = MaterialTheme.typography.bodyMedium)
+                }
+
+                // Поля для конкретного cutoff
+                when (state.ragCutoffMode) {
+                    ru.izhxx.aichallenge.domain.rag.CutoffMode.Static -> {
+                        Text(
+                            text = "minRerankScore (0.0 - 1.0)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = state.ragMinRerankScore,
+                            onValueChange = { viewModel.updateRagMinRerankScore(it) },
+                            label = { Text("minRerankScore") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isLoading && state.ragEnabled,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+                    }
+                    ru.izhxx.aichallenge.domain.rag.CutoffMode.Quantile -> {
+                        Text(
+                            text = "quantile q (0.0 - 1.0)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = state.ragQuantileQ,
+                            onValueChange = { viewModel.updateRagQuantileQ(it) },
+                            label = { Text("quantile q") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isLoading && state.ragEnabled,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+                    }
+                    ru.izhxx.aichallenge.domain.rag.CutoffMode.ZScore -> {
+                        Text(
+                            text = "z‑score threshold (например, -0.5)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = state.ragZScore,
+                            onValueChange = { viewModel.updateRagZScore(it) },
+                            label = { Text("z‑score") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isLoading && state.ragEnabled,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Секция системного промпта

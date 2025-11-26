@@ -530,22 +530,24 @@ class ChatViewModel(
                             val u = r.usage
                             return if (u == null) "нет метрик" else "prompt=${u.promptTokens}, completion=${u.completionTokens}, total=${u.totalTokens}, timeMs=${u.responseTimeMs}"
                         }
-                        val chunks = if (cmp.usedChunks.isEmpty()) "—" else cmp.usedChunks.joinToString(", ")
+                        val baselineChunks = if (cmp.baselineUsedChunks.isEmpty()) "—" else cmp.baselineUsedChunks.joinToString(", ")
+                        val filteredChunks = if (cmp.filteredUsedChunks.isEmpty()) "—" else cmp.filteredUsedChunks.joinToString(", ")
                         val summaryText = buildString {
-                            appendLine("Сравнение ответов (без RAG vs с RAG):")
+                            appendLine("Сравнение ответов (без фильтра vs с фильтром):")
                             appendLine()
                             appendLine("— Baseline:")
                             appendLine(baselineText.ifBlank { "<пусто>" })
                             appendLine()
-                            appendLine("Метрики baseline: ${usageStr(cmp.baseline)}")
+                            appendLine("Метрики baseline: ${usageStr(cmp.baseline)}; retrievalTimeMs=${cmp.baselineRetrievalTimeMs}")
                             appendLine()
-                            appendLine("— RAG:")
+                            appendLine("— С фильтром/реранком:")
                             appendLine(ragText.ifBlank { "<пусто>" })
                             appendLine()
-                            appendLine("Метрики RAG: ${usageStr(cmp.rag)}; retrievalTimeMs=${cmp.retrievalTimeMs}")
-                            appendLine("Использованные чанки: $chunks")
+                            appendLine("Метрики фильтр/реранк: ${usageStr(cmp.rag)}; retrievalTimeMs=${cmp.filteredRetrievalTimeMs}")
+                            appendLine("Исп. чанки (baseline): $baselineChunks")
+                            appendLine("Исп. чанки (filter): $filteredChunks")
                             appendLine()
-                            appendLine(if (cmp.usedChunks.isEmpty()) "Вывод: RAG не помог (релевантный контекст не найден)." else "Вывод: RAG использовал внешний контекст — ответ может быть точнее по данным из базы.")
+                            appendLine(if (cmp.filteredUsedChunks.isEmpty()) "Вывод: RAG не помог (релевантный контекст не найден)." else "Вывод: RAG использовал внешний контекст — ответ может быть точнее по данным из базы.")
                         }
                         addUiMessage(
                             ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiMessage.AssistantMessage(

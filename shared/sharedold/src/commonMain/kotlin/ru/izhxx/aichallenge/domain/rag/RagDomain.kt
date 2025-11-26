@@ -14,6 +14,37 @@ enum class ChatMode {
 }
 
 /**
+ * Режим второго этапа (после первичного kNN).
+ */
+enum class RerankMode {
+    None,
+    MMR,
+    LLM // локальный LLM-as-reranker через Ollama (опционально)
+}
+
+/**
+ * Режим отсечения нерелевантных результатов после второго этапа.
+ */
+enum class CutoffMode {
+    Static,   // статический порог (minRerankScore), применим прежде всего для LLM/cross-encoder
+    Quantile, // отсечение нижней квантили по score (напр. q=0.2)
+    ZScore    // нормализация и отрезание по z >= threshold
+}
+
+/**
+ * Настройки второго этапа ранжирования/фильтрации.
+ */
+data class RerankSettings(
+    val mode: RerankMode = RerankMode.None,
+    val candidateK: Int = 16,           // число кандидатов с 1-го этапа для rerank
+    val mmrLambda: Double = 0.5,        // баланс релевантность/диверсификация для MMR
+    val cutoffMode: CutoffMode = CutoffMode.Quantile,
+    val minRerankScore: Double? = null, // для Static (актуально для LLM-score); для MMR можно не использовать
+    val quantileQ: Double = 0.2,        // для Quantile: отбросить нижние q
+    val zScore: Double = -0.5           // для ZScore: отрезать по z >= zScore
+)
+
+/**
  * Настройки RAG.
  * - enabled: включает/выключает RAG-пайплайн
  * - indexPath: путь к JSON-индексу, созданному doc-indexer'ом
@@ -26,7 +57,8 @@ data class RagSettings(
     val indexPath: String? = null,
     val topK: Int = 4,
     val minScore: Double = 0.3,
-    val maxContextTokens: Int = 1024
+    val maxContextTokens: Int = 1024,
+    val rerank: RerankSettings = RerankSettings()
 )
 
 /**
@@ -98,4 +130,16 @@ interface RagRetriever {
         index: DocumentIndex,
         maxTokens: Int
     ): String
+}
+
+/**
+ * Второй этап: интерфейс реранкера.
+ */
+interface RagReranker {
+    suspend fun rerank(
+        questionEmbedding: List<Double>,
+        candidates: List<RetrievedChunk>,
+        index: DocumentIndex,
+        settings: RerankSettings
+    ): List<RetrievedChunk>
 }

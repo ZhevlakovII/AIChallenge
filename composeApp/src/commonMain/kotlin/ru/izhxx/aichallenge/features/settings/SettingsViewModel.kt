@@ -15,6 +15,9 @@ import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
 import ru.izhxx.aichallenge.features.settings.state.SettingsState
 import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
 import ru.izhxx.aichallenge.domain.rag.RagSettings
+import ru.izhxx.aichallenge.domain.rag.RerankSettings
+import ru.izhxx.aichallenge.domain.rag.RerankMode
+import ru.izhxx.aichallenge.domain.rag.CutoffMode
 
 /**
  * ViewModel для экрана настроек
@@ -63,6 +66,14 @@ class SettingsViewModel(
                         ragTopK = ragSettings.topK.toString(),
                         ragMinScore = ragSettings.minScore.toString(),
                         ragMaxContextTokens = ragSettings.maxContextTokens.toString(),
+                        // ReranK (2-й этап)
+                        ragRerankMode = ragSettings.rerank.mode,
+                        ragCandidateK = ragSettings.rerank.candidateK.toString(),
+                        ragMmrLambda = ragSettings.rerank.mmrLambda.toString(),
+                        ragCutoffMode = ragSettings.rerank.cutoffMode,
+                        ragMinRerankScore = ragSettings.rerank.minRerankScore?.toString().orEmpty(),
+                        ragQuantileQ = ragSettings.rerank.quantileQ.toString(),
+                        ragZScore = ragSettings.rerank.zScore.toString(),
                         isLoading = false
                     )
                 }
@@ -183,6 +194,29 @@ class SettingsViewModel(
     }
     fun updateRagMaxContextTokens(value: String) {
         _state.update { it.copy(ragMaxContextTokens = value) }
+    }
+
+    // ======== RAG RERANK setters ========
+    fun updateRagRerankMode(mode: RerankMode) {
+        _state.update { it.copy(ragRerankMode = mode) }
+    }
+    fun updateRagCandidateK(value: String) {
+        _state.update { it.copy(ragCandidateK = value) }
+    }
+    fun updateRagMmrLambda(value: String) {
+        _state.update { it.copy(ragMmrLambda = value) }
+    }
+    fun updateRagCutoffMode(mode: CutoffMode) {
+        _state.update { it.copy(ragCutoffMode = mode) }
+    }
+    fun updateRagMinRerankScore(value: String) {
+        _state.update { it.copy(ragMinRerankScore = value) }
+    }
+    fun updateRagQuantileQ(value: String) {
+        _state.update { it.copy(ragQuantileQ = value) }
+    }
+    fun updateRagZScore(value: String) {
+        _state.update { it.copy(ragZScore = value) }
     }
 
     /**
@@ -314,6 +348,43 @@ class SettingsViewModel(
                 _state.update { it.copy(error = "RAG: путь к индексу не может быть пустым") }
                 return
             }
+
+            // Валидация RERANK
+            val candidateKValue = currentState.ragCandidateK.toIntOrNull()
+            if (candidateKValue == null || candidateKValue <= 0) {
+                _state.update { it.copy(error = "RAG: candidateK должен быть положительным числом") }
+                return
+            }
+            val mmrLambdaValue = currentState.ragMmrLambda.toDoubleOrNull()
+            if (mmrLambdaValue == null || mmrLambdaValue < 0.0 || mmrLambdaValue > 1.0) {
+                _state.update { it.copy(error = "RAG: mmrLambda должен быть числом от 0.0 до 1.0") }
+                return
+            }
+            when (currentState.ragCutoffMode) {
+                CutoffMode.Static -> {
+                    if (currentState.ragMinRerankScore.isNotBlank()) {
+                        val v = currentState.ragMinRerankScore.toDoubleOrNull()
+                        if (v == null || v < 0.0 || v > 1.0) {
+                            _state.update { it.copy(error = "RAG: Static minRerankScore должен быть числом 0.0..1.0 или пустым") }
+                            return
+                        }
+                    }
+                }
+                CutoffMode.Quantile -> {
+                    val q = currentState.ragQuantileQ.toDoubleOrNull()
+                    if (q == null || q < 0.0 || q > 1.0) {
+                        _state.update { it.copy(error = "RAG: Quantile q должен быть числом 0.0..1.0") }
+                        return
+                    }
+                }
+                CutoffMode.ZScore -> {
+                    val z = currentState.ragZScore.toDoubleOrNull()
+                    if (z == null) {
+                        _state.update { it.copy(error = "RAG: ZScore threshold должен быть числом") }
+                        return
+                    }
+                }
+            }
         }
 
         _state.update { it.copy(isLoading = true, isSaved = false, error = null) }
@@ -342,12 +413,29 @@ class SettingsViewModel(
         val ragTopKValue = currentState.ragTopK.toIntOrNull()
         val ragMinScoreValue = currentState.ragMinScore.toDoubleOrNull()
         val ragMaxCtxValue = currentState.ragMaxContextTokens.toIntOrNull()
+        val candidateKValue = currentState.ragCandidateK.toIntOrNull()
+        val mmrLambdaValue = currentState.ragMmrLambda.toDoubleOrNull()
+        val minRerankScoreValue = currentState.ragMinRerankScore.toDoubleOrNull()
+        val quantileQValue = currentState.ragQuantileQ.toDoubleOrNull()
+        val zScoreValue = currentState.ragZScore.toDoubleOrNull()
+
+        val rerank = RerankSettings(
+            mode = currentState.ragRerankMode,
+            candidateK = candidateKValue ?: 16,
+            mmrLambda = mmrLambdaValue ?: 0.5,
+            cutoffMode = currentState.ragCutoffMode,
+            minRerankScore = if (currentState.ragCutoffMode == CutoffMode.Static) minRerankScoreValue else null,
+            quantileQ = quantileQValue ?: 0.2,
+            zScore = zScoreValue ?: -0.5
+        )
+
         val ragSettings = ragDefaults.copy(
             enabled = currentState.ragEnabled,
             indexPath = currentState.ragIndexPath.trim().ifBlank { null },
             topK = ragTopKValue ?: ragDefaults.topK,
             minScore = ragMinScoreValue ?: ragDefaults.minScore,
-            maxContextTokens = ragMaxCtxValue ?: ragDefaults.maxContextTokens
+            maxContextTokens = ragMaxCtxValue ?: ragDefaults.maxContextTokens,
+            rerank = rerank
         )
 
         viewModelScope.launch {
@@ -397,6 +485,14 @@ class SettingsViewModel(
                 ragTopK = RagSettings().topK.toString(),
                 ragMinScore = RagSettings().minScore.toString(),
                 ragMaxContextTokens = RagSettings().maxContextTokens.toString(),
+                // RERANK дефолты
+                ragRerankMode = RerankMode.None,
+                ragCandidateK = "16",
+                ragMmrLambda = "0.5",
+                ragCutoffMode = CutoffMode.Quantile,
+                ragMinRerankScore = "",
+                ragQuantileQ = "0.2",
+                ragZScore = "-0.5",
                 error = null
             )
         }
