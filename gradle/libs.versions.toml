@@ -29,6 +29,13 @@ core = "1.17.0"
 slf4jVersion = "2.0.17"
 atomicfu = "0.29.0"
 
+# Ресурсы и инструменты
+detekt-version = "1.23.8"
+detekt-ruleset-compiler-version = "0.0.4"
+detekt-ruleset-ktlint-version = "0.50.0"
+detekt-ruleset-compose-version= "0.4.28"
+detekt-ruleset-decompose-version = "1.0.1"
+
 [libraries]
 android-gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -80,6 +87,12 @@ androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4jVersion" }
 atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicfu" }
 
+# Инструменты кодстайла
+detekt-gradle = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt-version" }
+detekt-ruleset-compiler = { module = "com.braisgabin.detekt:kotlin-compiler-wrapper", version.ref = "detekt-ruleset-compiler-version" }
+detekt-ruleset-ktlint = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt-version" }
+detekt-ruleset-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "detekt-ruleset-compose-version" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -92,3 +105,7 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+
+# Инструменты
+detekt-plugin = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt-version" }
+

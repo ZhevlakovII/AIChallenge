@@ -2,11 +2,10 @@ import ru.izhxx.aichallenge.logic.commonDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 
 plugins {
-    id("frontend.library")
+    id("kmp.library")
 }
 
 android {
-    // Namespace будет ru.izhxx.aichallenge.shared.core.safecall
     config("core.safecall")
 }
 

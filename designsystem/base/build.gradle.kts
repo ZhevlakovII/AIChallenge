@@ -6,11 +6,5 @@ plugins {
 }
 
 android {
-    config("core.ui.mvi")
-}
-
-kotlin {
-    commonDependencies {
-        implementation(libs.kotlinx.coroutinesCore)
-    }
+    config("designsystem.base")
 }

@@ -8,6 +8,7 @@ import ru.izhxx.aichallenge.logic.config.SharedConfig
  */
 fun KotlinMultiplatformExtension.config() {
     applyDefaultHierarchyTemplate()
+    jvmToolchain(SharedConfig.JVM_VERSION)
     androidTarget {
         compilerOptions {
             jvmTarget.set(SharedConfig.JVM_TARGET)

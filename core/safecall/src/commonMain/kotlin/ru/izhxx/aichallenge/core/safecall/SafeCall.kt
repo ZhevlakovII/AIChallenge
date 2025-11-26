@@ -32,9 +32,9 @@ inline fun <T> safeCall(
  * suspend-вариант [safeCall] для вызовов внутри корутин.
  * Перехватывает все ошибки, кроме отмены, и возвращает Result.
  */
-suspend inline fun <T> safeCallSuspend(
+suspend inline fun <T> safeCall(
     crossinline successLog: (T) -> Unit = {},
-    crossinline failureLog: (Throwable) -> Unit = {},
+    crossinline failureLog: (Exception) -> Unit = {},
     crossinline block: suspend () -> T
 ): Result<T> {
     return try {
@@ -44,7 +44,7 @@ suspend inline fun <T> safeCallSuspend(
     } catch (e: CancellationException) {
         // Не глотаем отмену корутин
         throw e
-    } catch (t: Throwable) {
+    } catch (t: Exception) {
         failureLog(t)
         Result.failure(t)
     }

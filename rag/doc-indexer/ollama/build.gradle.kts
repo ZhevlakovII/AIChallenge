@@ -3,7 +3,7 @@ import ru.izhxx.aichallenge.logic.configurator.config
 import ru.izhxx.aichallenge.logic.jvmDependencies
 
 plugins {
-    id("frontend.library")
+    id("kmp.library")
     alias(libs.plugins.kotlin.serialization)
 }
 

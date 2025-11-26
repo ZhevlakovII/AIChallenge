@@ -1,8 +1,9 @@
 import ru.izhxx.aichallenge.logic.configurator.config
 
 /*
- * Convention plugin: frontend.library
+ * Convention plugin: kmp.library
  * Базовая KMP Library конфигурация.
+ * Включает в себя таргеты: Android, iOS, JVM
  */
 
 plugins {

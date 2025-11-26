@@ -10,5 +10,6 @@ object SharedConfig {
 
     // Целевой уровень JVM для Kotlin компилятора
     val JVM_TARGET: JvmTarget = JvmTarget.JVM_21
+    const val JVM_VERSION: Int = 21
 
 }
