@@ -9,9 +9,8 @@ import ru.izhxx.aichallenge.domain.rag.RagEmbedder
 import ru.izhxx.aichallenge.domain.rag.RagIndexRepository
 import ru.izhxx.aichallenge.domain.rag.RagRetriever
 import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
+import kotlin.time.TimeSource
+import ru.izhxx.aichallenge.data.rag.RagSearchPipeline
 
 /**
  * Результат сравнения ответов: без RAG и с RAG, плюс метрики ретрива.
@@ -40,7 +39,6 @@ class CompareMessageUseCaseImpl(
     private val ragRetriever: RagRetriever
 ) : CompareMessageUseCase {
 
-    @OptIn(ExperimentalTime::class)
     override suspend fun invoke(
         text: String,
         previousMessages: List<LLMMessage>,
@@ -76,26 +74,28 @@ class CompareMessageUseCaseImpl(
             }
         }
 
-        val startRetrieval = Clock.System.now().nanosecondsOfSecond
-        val qEmbedding = try {
-            ragEmbedder.embed(text)
-        } catch (e: Throwable) {
-            return Result.failure(IllegalStateException("RAG: embedder недоступен: ${e.message}", e))
-        }
-        val retrieved = ragRetriever.retrieve(
-            questionEmbedding = qEmbedding,
-            index = index,
-            topK = settings.topK,
-            minScore = settings.minScore
+        val mark = TimeSource.Monotonic.markNow()
+        val pipeline = RagSearchPipeline(
+            embedder = ragEmbedder,
+            retriever = ragRetriever
         )
-        val retrievalTime = Clock.System.now().nanosecondsOfSecond - startRetrieval
+        val chunks = try {
+            pipeline.retrieveChunks(
+                questionText = text,
+                index = index,
+                settings = settings
+            )
+        } catch (e: Throwable) {
+            return Result.failure(IllegalStateException("RAG: pipeline ошибка: ${e.message}", e))
+        }
+        val retrievalTime = mark.elapsedNow().inWholeMilliseconds
 
-        val used = retrieved.map { "${it.path}#${it.chunkIndex}" }
+        val used = chunks.map { "${it.path}#${it.chunkIndex}" }
 
-        val contextBlock = ragRetriever.buildContext(
-            chunks = retrieved,
+        val contextBlock = pipeline.buildContext(
+            chunks = chunks,
             index = index,
-            maxTokens = settings.maxContextTokens
+            settings = settings
         )
 
         val augmentedMessages = buildList {
@@ -116,7 +116,7 @@ class CompareMessageUseCaseImpl(
             CompareResult(
                 baseline = baselineRes,
                 rag = ragRes,
-                retrievalTimeMs = retrievalTime.toLong(),
+                retrievalTimeMs = retrievalTime,
                 usedChunks = used
             )
         )

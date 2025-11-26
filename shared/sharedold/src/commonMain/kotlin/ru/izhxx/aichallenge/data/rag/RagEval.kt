@@ -7,7 +7,7 @@ import ru.izhxx.aichallenge.domain.rag.RerankMode
 import ru.izhxx.aichallenge.domain.rag.RetrievedChunk
 import ru.izhxx.aichallenge.rag.docindexer.core.model.DocumentIndex
 import kotlin.math.log2
-import kotlin.system.getTimeMillis
+import kotlin.time.TimeSource
 
 /**
  * Мини-харнесс оценки качества RAG.
@@ -77,9 +77,9 @@ object RagEval {
         val idcg = idealDcg(k = k, relCount = averageRelevantCount(cases))
 
         for (c in cases) {
-            val t0 = getTimeMillis()
+            val mark = TimeSource.Monotonic.markNow()
             val chunks = pipeline.retrieveChunks(c.q, index, settings)
-            sumLatency += (getTimeMillis() - t0)
+            sumLatency += mark.elapsedNow().inWholeMilliseconds
             val eval = evaluateOne(c, chunks, k)
             if (eval.hit) hits++
             sumRR += eval.rr
