@@ -6,5 +6,5 @@ plugins {
 }
 
 android {
-    config("designsystem.base")
+    config("designsystem")
 }

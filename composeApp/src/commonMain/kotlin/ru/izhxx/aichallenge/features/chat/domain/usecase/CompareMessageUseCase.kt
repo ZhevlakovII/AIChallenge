@@ -9,6 +9,8 @@ import ru.izhxx.aichallenge.domain.rag.RagEmbedder
 import ru.izhxx.aichallenge.domain.rag.RagIndexRepository
 import ru.izhxx.aichallenge.domain.rag.RagRetriever
 import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
+import ru.izhxx.aichallenge.domain.rag.RerankMode
+import ru.izhxx.aichallenge.domain.rag.CutoffMode
 import kotlin.time.TimeSource
 import ru.izhxx.aichallenge.data.rag.RagSearchPipeline
 
@@ -18,8 +20,10 @@ import ru.izhxx.aichallenge.data.rag.RagSearchPipeline
 data class CompareResult(
     val baseline: LLMResponse,
     val rag: LLMResponse,
-    val retrievalTimeMs: Long,
-    val usedChunks: List<String> // path#chunkIndex
+    val baselineRetrievalTimeMs: Long,
+    val baselineUsedChunks: List<String>,
+    val filteredRetrievalTimeMs: Long,
+    val filteredUsedChunks: List<String>
 )
 
 interface CompareMessageUseCase {
@@ -58,11 +62,7 @@ class CompareMessageUseCaseImpl(
             previousMessages + LLMMessage(role = MessageRole.USER, content = text)
         }
 
-        // 1) BASELINE
-        val baselineRes = llmClientRepository.sendMessagesWithSummary(messagesForRequest, summary)
-            .getOrElse { return Result.failure(it) }
-
-        // 2) RAG: подготовка
+        // 1) RAG: получить настройки и индекс
         val settings = ragSettingsRepository.getSettings()
         val index = ragIndexRepository.getCurrentIndex() ?: run {
             val idxPath = settings.indexPath
@@ -73,12 +73,50 @@ class CompareMessageUseCaseImpl(
                 return Result.failure(IllegalStateException("Не удалось загрузить RAG-индекс: ${e.message}", e))
             }
         }
-
-        val mark = TimeSource.Monotonic.markNow()
+        // 2) Подготовка пайплайна и "базовых" настроек без второго этапа (без rerank и без cutoff)
         val pipeline = RagSearchPipeline(
             embedder = ragEmbedder,
             retriever = ragRetriever
         )
+        val baseSettings = settings.copy(
+            rerank = settings.rerank.copy(
+                mode = RerankMode.None,
+                cutoffMode = CutoffMode.Quantile,
+                quantileQ = 0.0
+            )
+        )
+        val baseMark = TimeSource.Monotonic.markNow()
+        val baseChunks = try {
+            pipeline.retrieveChunks(
+                questionText = text,
+                index = index,
+                settings = baseSettings
+            )
+        } catch (e: Throwable) {
+            return Result.failure(IllegalStateException("RAG (без фильтра): pipeline ошибка: ${e.message}", e))
+        }
+        val baseRetrievalTime = baseMark.elapsedNow().inWholeMilliseconds
+        val baseContext = pipeline.buildContext(
+            chunks = baseChunks,
+            index = index,
+            settings = baseSettings
+        )
+        val baselineUsed = baseChunks.map { "${it.path}#${it.chunkIndex}" }
+        val baselineMessages = buildList {
+            if (messagesForRequest.isNotEmpty()) {
+                addAll(messagesForRequest.dropLast(1))
+                add(LLMMessage(role = MessageRole.SYSTEM, content = baseContext))
+                add(messagesForRequest.last())
+            } else {
+                add(LLMMessage(role = MessageRole.SYSTEM, content = baseContext))
+                add(LLMMessage(role = MessageRole.USER, content = text))
+            }
+        }
+        val baselineRes = llmClientRepository.sendMessagesWithSummary(baselineMessages, summary)
+            .getOrElse { return Result.failure(it) }
+
+
+        val mark = TimeSource.Monotonic.markNow()
         val chunks = try {
             pipeline.retrieveChunks(
                 questionText = text,
@@ -111,13 +149,14 @@ class CompareMessageUseCaseImpl(
 
         val ragRes = llmClientRepository.sendMessagesWithSummary(augmentedMessages, summary)
             .getOrElse { return Result.failure(it) }
-
         return Result.success(
             CompareResult(
                 baseline = baselineRes,
                 rag = ragRes,
-                retrievalTimeMs = retrievalTime,
-                usedChunks = used
+                baselineRetrievalTimeMs = baseRetrievalTime,
+                baselineUsedChunks = baselineUsed,
+                filteredRetrievalTimeMs = retrievalTime,
+                filteredUsedChunks = used
             )
         )
     }
