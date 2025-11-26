@@ -17,15 +17,23 @@ data class SettingsState(
     val responseFormat: ResponseFormat = ResponseFormat.MARKDOWN,
     val systemPrompt: String = "",
 
-    // Расширенные настройки
+    // Расширенные настройки генерации
     val topK: String = "40",
     val topP: String = "0.95",
     val minP: String = "0.05",
     val topA: String = "0.0",
     val seed: String = "0",
+
     // Фича-флаг: включить function calling (MCP tools)
     val enableMcpToolCalling: Boolean = false,
-    
+
+    // ===== RAG настройки =====
+    val ragEnabled: Boolean = false,
+    val ragIndexPath: String = "",
+    val ragTopK: String = "4",
+    val ragMinScore: String = "0.3",
+    val ragMaxContextTokens: String = "1024",
+
     // Состояние UI
     val isLoading: Boolean = true,
     val isSaved: Boolean = false,

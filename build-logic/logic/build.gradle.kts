@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.ksp.gradle)
     implementation(libs.android.gradle)
     implementation(libs.compose.gradle)
+    implementation(libs.detekt.gradle)
 
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 }

@@ -10,6 +10,7 @@ val settingsModule = module {
         SettingsViewModel(
             providerSettingsStore = get(),
             lLMConfigRepository = get(),
+            ragSettingsRepository = get()
         )
     }
 }

@@ -5,13 +5,21 @@ import ru.izhxx.aichallenge.domain.model.message.LLMMessage
 import ru.izhxx.aichallenge.domain.model.response.LLMResponse
 import ru.izhxx.aichallenge.domain.repository.LLMClientRepository
 import ru.izhxx.aichallenge.domain.repository.ProviderSettingsRepository
+import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
+import ru.izhxx.aichallenge.domain.rag.RagIndexRepository
+import ru.izhxx.aichallenge.domain.rag.RagEmbedder
+import ru.izhxx.aichallenge.domain.rag.RagRetriever
 
 /**
  * Реализация юзкейса отправки сообщения
  */
 class SendMessageUseCaseImpl(
     private val llmClientRepository: LLMClientRepository,
-    private val providerSettingsRepository: ProviderSettingsRepository
+    private val providerSettingsRepository: ProviderSettingsRepository,
+    private val ragSettingsRepository: RagSettingsRepository,
+    private val ragIndexRepository: RagIndexRepository,
+    private val ragEmbedder: RagEmbedder,
+    private val ragRetriever: RagRetriever
 ) : SendMessageUseCase {
 
     override suspend fun invoke(
@@ -47,7 +55,63 @@ class SendMessageUseCaseImpl(
             previousMessages + userMessage
         }
 
-        // Отправляем запрос через репозиторий с учетом суммаризации
-        return llmClientRepository.sendMessagesWithSummary(messagesForRequest, summary)
+        // RAG pipeline
+        val ragSettings = ragSettingsRepository.getSettings()
+        if (!ragSettings.enabled) {
+            // Без RAG — стандартный путь
+            return llmClientRepository.sendMessagesWithSummary(messagesForRequest, summary)
+        }
+
+        // Гарантируем загруженный индекс
+        val index = ragIndexRepository.getCurrentIndex() ?: run {
+            val idxPath = ragSettings.indexPath
+            if (idxPath.isNullOrBlank()) {
+                return Result.failure(IllegalStateException("RAG включен, но не настроен путь к индексу"))
+            }
+            ragIndexRepository.loadIndex(idxPath).getOrElse { e ->
+                return Result.failure(IllegalStateException("Не удалось загрузить RAG-индекс: ${e.message}", e))
+            }
+        }
+
+        // Эмбеддинг вопроса
+        val qEmbedding = try {
+            ragEmbedder.embed(text)
+        } catch (e: Throwable) {
+            return Result.failure(IllegalStateException("RAG: embedder недоступен: ${e.message}", e))
+        }
+
+        // Поиск ближайших чанков
+        val retrieved = ragRetriever.retrieve(
+            questionEmbedding = qEmbedding,
+            index = index,
+            topK = ragSettings.topK,
+            minScore = ragSettings.minScore
+        )
+
+        if (retrieved.isEmpty()) {
+            // Нет релевантных чанков — отправляем без контекста
+            return llmClientRepository.sendMessagesWithSummary(messagesForRequest, summary)
+        }
+
+        // Сборка контекстного блока
+        val contextBlock = ragRetriever.buildContext(
+            chunks = retrieved,
+            index = index,
+            maxTokens = ragSettings.maxContextTokens
+        )
+
+        // Вставляем CONTEXT перед пользовательским вопросом
+        val augmentedMessages = buildList {
+            if (messagesForRequest.isNotEmpty()) {
+                addAll(messagesForRequest.dropLast(1))
+                add(LLMMessage(role = MessageRole.SYSTEM, content = contextBlock))
+                add(messagesForRequest.last())
+            } else {
+                add(LLMMessage(role = MessageRole.SYSTEM, content = contextBlock))
+                add(LLMMessage(role = MessageRole.USER, content = text))
+            }
+        }
+
+        return llmClientRepository.sendMessagesWithSummary(augmentedMessages, summary)
     }
 }

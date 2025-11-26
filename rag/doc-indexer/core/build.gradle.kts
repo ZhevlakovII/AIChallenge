@@ -1,10 +1,11 @@
+
 import ru.izhxx.aichallenge.logic.commonDependencies
+import ru.izhxx.aichallenge.logic.commonTestDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 import ru.izhxx.aichallenge.logic.jvmDependencies
-import ru.izhxx.aichallenge.logic.commonTestDependencies
 
 plugins {
-    id("frontend.library")
+    id("kmp.library")
     alias(libs.plugins.kotlin.serialization)
 }
 

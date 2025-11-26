@@ -1,5 +1,5 @@
 plugins {
-    id("backend.library")
+    id("jvm.library")
     application
 }
 

@@ -12,20 +12,8 @@ plugins {
     alias(libs.plugins.ktor) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.room) apply false
-}
-
-subprojects {
-    // Централизуем Kotlin JDK Toolchain 21 для всех модулей с Kotlin-плагином
-    plugins.withId("org.jetbrains.kotlin.multiplatform") {
-        extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension>("kotlin") {
-            jvmToolchain(21)
-        }
-    }
-    plugins.withId("org.jetbrains.kotlin.jvm") {
-        extensions.configure<org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension>("kotlin") {
-            jvmToolchain(21)
-        }
-    }
+    alias(libs.plugins.detekt.plugin) apply false
+    id("lint")
 }
 
 /* ===== Агрегирующие задачи анализа зависимостей (jdeps) по всем модулям ===== */

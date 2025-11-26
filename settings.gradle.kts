@@ -35,11 +35,23 @@ plugins {
 }
 
 includeBuild("build-logic")
-include(":composeApp")
-include(":shared:sharedold")
 
 // Auto-include discovered modules under target roots
-val targetRoots = listOf("frontend", "backend", "shared", "instances", "rag")
+val targetRoots = listOf(
+    "app",
+    "chat",
+    "config",
+    "core",
+    "mcp",
+    "metrics",
+    "rag",
+    "reminder",
+    "summary",
+    // TODO("It's old! Remove after migrate to v2")
+    "composeApp",
+    "instances",
+    "shared"
+)
 
 // Include modules from target roots
 targetRoots.forEach(::includeModulesUnder)

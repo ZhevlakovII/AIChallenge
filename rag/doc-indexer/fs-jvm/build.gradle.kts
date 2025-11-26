@@ -1,5 +1,5 @@
 plugins {
-    id("backend.library")
+    id("jvm.library")
     application // не делает модуль приложением, но даёт доступ к Java toolchain при необходимости
 }
 
