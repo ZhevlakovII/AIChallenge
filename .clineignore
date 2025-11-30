@@ -10,4 +10,9 @@
 # - Use * for wildcards
 # - Use ! to negate patterns
 # =============================================================================
-docs/
+memory-bank
+memory-bank/
+rag-embeddings-data
+rag-embeddings-data/
+unused
+unused/

@@ -33,9 +33,13 @@ import ru.izhxx.aichallenge.core.ui.mvi.model.MviState
  * }
  * ```
  */
-public fun interface MviReducer<S : MviState, R : MviResult> {
+fun interface MviReducer<S : MviState, R : MviResult> {
     /**
      * Выполнить свёртку результата [result] с текущим состоянием [state] в новое состояние.
+     *
+     * @param state Текущее состояние перед свёрткой.
+     * @param result Результат, порождённый исполнителем.
+     * @return Новое состояние, вычисленное редьюсером.
      */
-    public fun reduce(state: S, result: R): S
+    fun reduce(state: S, result: R): S
 }

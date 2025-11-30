@@ -53,21 +53,21 @@ import ru.izhxx.aichallenge.core.ui.mvi.model.MviState
  * }
  * ```
  */
-public interface MviViewModel<I : MviIntent, R : MviResult, S : MviState, E : MviEffect> {
+interface MviViewModel<I : MviIntent, R : MviResult, S : MviState, E : MviEffect> {
     /**
      * Текущее долгоживущее состояние экрана.
      */
-    public val state: StateFlow<S>
+    val state: StateFlow<S>
 
     /**
      * Поток одноразовых побочных эффектов для UI (навигация, тосты, диалоги).
      */
-    public val effects: Flow<E>
+    val effects: Flow<E>
 
     /**
      * Входная точка событий от UI/внешних источников.
      *
      * @param intent намерение изменить состояние/выполнить действие.
      */
-    public fun accept(intent: I)
+    fun accept(intent: I)
 }

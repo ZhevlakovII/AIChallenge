@@ -27,4 +27,4 @@ package ru.izhxx.aichallenge.core.ui.mvi.model
  * ) : MviState
  * ```
  */
-public interface MviState
+interface MviState

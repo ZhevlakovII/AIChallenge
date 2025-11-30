@@ -36,21 +36,22 @@ plugins {
 
 includeBuild("build-logic")
 
-// Auto-include discovered modules under target roots
+/**
+ * Auto-include discovered modules under target roots
+ * Split to new and old targets
+ */
 val targetRoots = listOf(
-    "app",
-    "chat",
-    "config",
     "core",
-    "mcp",
-    "metrics",
-    "rag",
-    "reminder",
-    "summary",
+    "designsystem",
+    "instruments",
+    "features",
+    "app",
+    "targets",
     // TODO("It's old! Remove after migrate to v2")
     "composeApp",
     "instances",
-    "shared"
+    "shared",
+    "rag",
 )
 
 // Include modules from target roots
