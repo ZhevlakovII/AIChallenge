@@ -20,6 +20,7 @@ kotlin {
         implementation(libs.ktor.serializationKotlinxJson)
         implementation(libs.ktor.clientLogging)
         implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.koin.core)
     }
 
     androidDependencies {

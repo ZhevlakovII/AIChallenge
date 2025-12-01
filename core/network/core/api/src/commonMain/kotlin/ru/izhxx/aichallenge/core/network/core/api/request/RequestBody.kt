@@ -40,4 +40,67 @@ sealed interface RequestBody {
         val jsonString: String,
         override val contentType: String = "application/json; charset=utf-8"
     ) : RequestBody
+
+    /**
+     * Multipart form data (for file uploads).
+     *
+     * @param parts List of multipart parts
+     * @param boundary Multipart boundary (auto-generated if null)
+     */
+    data class Multipart(
+        val parts: List<Part>,
+        val boundary: String? = null
+    ) : RequestBody {
+        override val contentType: String
+            get() = "multipart/form-data; boundary=${boundary ?: "----KotlinMultipartBoundary"}"
+
+        /**
+         * A single part in multipart request.
+         */
+        sealed interface Part {
+            val name: String
+
+            data class FormField(
+                override val name: String,
+                val value: String
+            ) : Part
+
+            data class FileData(
+                override val name: String,
+                val filename: String,
+                val contentType: String,
+                val bytes: ByteArray
+            ) : Part {
+                override fun equals(other: Any?): Boolean {
+                    if (this === other) return true
+                    if (other == null || this::class != other::class) return false
+                    other as FileData
+                    if (name != other.name) return false
+                    if (filename != other.filename) return false
+                    if (contentType != other.contentType) return false
+                    if (!bytes.contentEquals(other.bytes)) return false
+                    return true
+                }
+
+                override fun hashCode(): Int {
+                    var result = name.hashCode()
+                    result = 31 * result + filename.hashCode()
+                    result = 31 * result + contentType.hashCode()
+                    result = 31 * result + bytes.contentHashCode()
+                    return result
+                }
+            }
+        }
+    }
+
+    /**
+     * Streaming body for large files (avoids loading entire content into memory).
+     *
+     * Platform-specific implementation required.
+     */
+    data class Stream(
+        val contentLength: Long?,
+        override val contentType: String?,
+        val provider: suspend () -> ByteArray // TODO: Platform-specific channel/stream abstraction
+    ) : RequestBody
 }

@@ -6,17 +6,19 @@ import ru.izhxx.aichallenge.core.network.core.api.interceptor.ResponseIntercepto
 import ru.izhxx.aichallenge.core.network.core.api.config.LoggingConfig
 import ru.izhxx.aichallenge.core.network.core.api.config.TimeoutConfig
 import ru.izhxx.aichallenge.core.network.core.api.interceptor.RequestInterceptor
+import ru.izhxx.aichallenge.core.network.core.api.request.RequestBody
+import ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig
 
 /**
  * Пер-запросные переопределения настроек Core Transport Layer.
  *
- * Применяется поверх глобального [ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig] на этапе выполнения запроса.
+ * Применяется поверх глобального [NetworkConfig] на этапе выполнения запроса.
  * Не содержит зависимостей на конкретную реализацию HTTP-клиента.
  */
 data class RequestOptions(
-    /** Локальные тайм-ауты (если задано — перекрывают [ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig.timeouts]). */
+    /** Локальные тайм-ауты (если задано — перекрывают [NetworkConfig.timeouts]). */
     val timeoutsOverride: TimeoutConfig? = null,
-    /** Локальная политика логирования (если задано — перекрывает [ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig.logging]). */
+    /** Локальная политика логирования (если задано — перекрывает [NetworkConfig.logging]). */
     val loggingOverride: LoggingConfig? = null,
     /** Дополнительные заголовки, добавляемые к запросу. */
     val extraHeaders: Map<String, String> = emptyMap(),

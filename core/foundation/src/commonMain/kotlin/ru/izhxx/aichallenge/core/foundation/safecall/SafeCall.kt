@@ -53,7 +53,7 @@ inline fun <T> safeCall(
  * @see AppError
  */
 suspend inline fun <T> suspendedSafeCall(
-    crossinline throwableMapper: (Throwable) -> AppError = { t -> defaultUnknownError(t) },
+    crossinline throwableMapper: (suspend (Throwable) -> AppError),
     crossinline block: suspend () -> T
 ): AppResult<T> {
     return try {

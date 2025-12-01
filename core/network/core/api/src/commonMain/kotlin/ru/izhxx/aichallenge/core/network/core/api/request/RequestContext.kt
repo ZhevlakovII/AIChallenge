@@ -25,6 +25,10 @@ data class RequestContext(
      */
     val query: Map<String, String?> = emptyMap(),
     /**
+     * Тело запроса (опционально).
+     */
+    val body: RequestBody? = null,
+    /**
      * Момент начала исполнения запроса (мс, unix time), может быть заполнен impl-слоем.
      */
     val startTimestampMillis: Long? = null
