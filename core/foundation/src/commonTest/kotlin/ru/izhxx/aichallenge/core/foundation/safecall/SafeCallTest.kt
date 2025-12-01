@@ -59,7 +59,13 @@ class SafeCallTest {
 
     @Test
     fun `suspendedSafeCall success returns Success`() = runTest {
-        val result = suspendedSafeCall { "ok" }
+        val mapped = AppError.DomainError(code = "domain.bad", rawMessage = "mapped")
+
+        val result = suspendedSafeCall(
+            throwableMapper = { t ->
+                mapped
+            }
+        ) { "ok" }
 
         assertTrue(result is AppResult.Success)
         assertEquals("ok", result.value)
@@ -85,8 +91,14 @@ class SafeCallTest {
 
     @Test
     fun `suspendedSafeCall rethrows CancellationException`() = runTest {
+        val mapped = AppError.DomainError(code = "domain.bad", rawMessage = "mapped")
+
         assertFailsWith<CancellationException> {
-            suspendedSafeCall { throw CancellationException("cancel-s") }
+            suspendedSafeCall(
+                throwableMapper = { t ->
+                    mapped
+                }
+            ) { throw CancellationException("cancel-s") }
         }
     }
 }

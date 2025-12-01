@@ -15,6 +15,7 @@ package ru.izhxx.aichallenge.core.foundation.logger
  */
 @PublishedApi
 internal expect object PlatformLogger {
+
     /**
      * Записывает уже подготовленное сообщение.
      *

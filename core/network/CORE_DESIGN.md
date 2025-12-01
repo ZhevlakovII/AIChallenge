@@ -17,9 +17,9 @@ The **core** module contains **only essential primitives**:
 
 **All additional functionality** (logging, metrics, auth, cache, etc.) is implemented as **plugins** in separate modules (`plugins/`).
 
-### Current Status
+### Current Status (Updated: 2025-12-02)
 
-The Core Transport Layer is **partially implemented**. The foundation is in place, but several critical primitives are missing.
+The Core Transport Layer is **60% complete** (3/5 phases done). Core primitives (Factory, Serialization, Security) are implemented. Metrics plugin and testing remain pending.
 
 ## 2. Gap Analysis
 
@@ -38,7 +38,6 @@ The Core Transport Layer is **partially implemented**. The foundation is in plac
   - `ResponseInterceptor` - response modification
   - `ErrorInterceptor` - error observation
 - ✅ `ErrorMapper` - error mapping interface
-- ⚠️ `NetworkMetrics` - **SHOULD BE MOVED TO** `plugins/metrics`
 - ✅ Request/Response models:
   - `RequestContext` - request representation
   - `RequestOptions` - per-request overrides
@@ -51,35 +50,45 @@ The Core Transport Layer is **partially implemented**. The foundation is in plac
 - ✅ `CoreHttpClientImpl` - Ktor-based implementation
 - ✅ Platform-specific engine factories (Android/iOS/JVM)
 - ✅ `DefaultErrorMapper` - basic error mapping
-- ⚠️ `NoOpNetworkMetrics` - **SHOULD BE MOVED TO** `plugins/metrics`
 - ✅ `MergedConfig` - config merging logic
 
-### 2.2 What is Missing in Core Primitives
+### 2.2 Implementation Status of Core Primitives
 
-According to `Plan.md` and the "primitives-only" philosophy, the following core components are missing:
+#### 1. Factory Pattern (Plan.md §5.2) ✅ COMPLETED (2025-11-30)
+- ✅ `HttpClientFactory` - public factory interface for creating clients
+  - File: `core/api/factory/HttpClientFactory.kt`
+- ✅ `HttpClientFactoryImpl` - Factory implementation with proper DI integration
+  - File: `core/impl/factory/HttpClientFactoryImpl.kt`
 
-#### 1. Factory Pattern (Plan.md §5.2) ✅ CORE PRIMITIVE
-- ❌ `HttpClientFactory` - public factory interface for creating clients
-- ❌ Factory implementation with proper DI integration
+#### 2. Serialization Enhancements (Plan.md §12) ✅ COMPLETED (2025-11-30)
+- ✅ `ContentFormat` - enum for JSON/ProtoBuf/Text/Binary/HTML
+  - File: `core/api/serialization/ContentFormat.kt`
+- ✅ `RequestBody.Multipart` - multipart/form-data support (RFC 2388 compliant)
+  - File: `core/api/request/RequestBody.kt`
+- ✅ `RequestBody.Stream` - file streaming support
+  - File: `core/api/request/RequestBody.kt`
+- ✅ Plain text/HTML response handlers in `CoreHttpClientImpl`
+- ⚠️ ProtoBuf support in `CoreHttpClientImpl` - **OPTIONAL** (requires kotlinx-serialization-protobuf dependency, skipped for now)
 
-#### 2. Serialization Enhancements (Plan.md §12) ✅ CORE PRIMITIVE
-- ❌ `ContentFormat` - enum for JSON/ProtoBuf/Text/Binary
-- ❌ ProtoBuf support in `CoreHttpClientImpl`
-- ❌ `RequestBody.Multipart` - multipart/form-data support
-- ❌ `RequestBody.Stream` - file streaming support
-- ❌ Plain text/HTML response handlers
+#### 3. Security Implementation (Plan.md §9.1, §5.1) ✅ MOSTLY COMPLETED (2025-12-01)
+- ✅ `CertificatePinningImpl` - SHA-256 hash-based validation
+  - File: `core/impl/security/CertificatePinningImpl.kt`
+- ✅ Application of `trustedCertificatesPem` from `SecurityConfig` (Android/JVM)
+  - Files: `core/impl/engine/PlatformEngine.android.kt`, `PlatformEngine.jvm.kt`
+- ✅ Custom certificate handling in engine config (Android OkHttp, JVM CIO)
+- ⚠️ iOS certificate handling - **PREPARED** but requires platform-specific Kotlin/Native implementation
+  - File: `core/impl/engine/PlatformEngine.ios.kt` (TODO comments in place)
 
-#### 3. Security Implementation (Plan.md §9.1, §5.1) ✅ CORE PRIMITIVE
-- ❌ `CertificatePinningImpl` - platform-specific implementation
-- ❌ Application of `trustedCertificatesPem` from `SecurityConfig`
-- ❌ Custom certificate handling in engine config
+#### 4. Enhanced Request Context ✅ COMPLETED (2025-11-30)
+- ✅ `body` field added to `RequestContext`
+  - File: `core/api/request/RequestContext.kt`
+- ✅ `RequestOptions.body` deprecated in favor of `RequestContext.body`
+  - File: `core/api/request/RequestOptions.kt`
 
-#### 4. Enhanced Request Context ✅ CORE PRIMITIVE
-- ❌ `body` field in `RequestContext` (currently only in `RequestOptions`)
-
-#### 5. Dependency Injection (Plan.md §15.1) ✅ CORE PRIMITIVE
-- ❌ `CoreNetworkModule` - Koin module for DI
-- ❌ Factory registrations
+#### 5. Dependency Injection (Plan.md §15.1) ✅ COMPLETED (2025-11-30)
+- ✅ `CoreNetworkModule` - Koin module for DI
+  - File: `core/impl/di/CoreNetworkModule.kt`
+- ✅ Factory registrations (HttpClientFactory, NetworkConfig singletons)
 
 ### 2.3 What Should be Moved to Plugins
 
@@ -622,9 +631,9 @@ val client = factory.create(
 
 ## 5. Implementation Plan (Revised)
 
-**Overall Progress: 2/5 Phases Complete (40%)**
+**Overall Progress: 3/5 Phases Complete (60%)**
 
-### Phase 1: Core Primitives - Factory & DI ✅ **COMPLETED**
+### Phase 1: Core Primitives - Factory & DI ✅ **COMPLETED** (2025-11-30)
 1. ✅ Create `HttpClientFactory` interface (API)
    - File: `core/network/core/api/factory/HttpClientFactory.kt`
 2. ✅ Implement `HttpClientFactoryImpl` (Impl)
@@ -638,7 +647,7 @@ val client = factory.create(
 
 **Build Status:** ✅ BUILD SUCCESSFUL
 
-### Phase 2: Core Primitives - Serialization ✅ **COMPLETED**
+### Phase 2: Core Primitives - Serialization ✅ **COMPLETED** (2025-11-30)
 1. ✅ Create `ContentFormat` enum
    - File: `core/network/core/api/serialization/ContentFormat.kt`
 2. ✅ Enhance `RequestBody` with Multipart and Stream
@@ -654,34 +663,41 @@ val client = factory.create(
 
 **Build Status:** ✅ BUILD SUCCESSFUL
 
-### Phase 3: Core Primitives - Security ⏳ **PENDING**
-1. ❌ Implement `CertificatePinningImpl`
-   - Target: `core/network/core/impl/security/CertificatePinningImpl.kt`
-2. ❌ Platform-specific SSL/TLS configuration
-   - Target: Platform-specific engine configurations
-3. ❌ Apply `trustedCertificatesPem` in engine config
-   - Target: `core/network/core/impl/engine/PlatformEngine.*.kt`
+### Phase 3: Core Primitives - Security ✅ **COMPLETED** (2025-12-01)
+1. ✅ Implement `CertificatePinningImpl`
+   - File: `core/network/core/impl/security/CertificatePinningImpl.kt`
+   - SHA-256 hash-based validation with host-specific pins
+2. ✅ Platform-specific SSL/TLS configuration (Android/JVM)
+   - Android: `core/network/core/impl/src/androidMain/kotlin/.../engine/PlatformEngine.android.kt`
+   - JVM: `core/network/core/impl/src/jvmMain/kotlin/.../engine/PlatformEngine.jvm.kt`
+   - iOS: `core/network/core/impl/src/iosMain/kotlin/.../engine/PlatformEngine.ios.kt` (partial)
+3. ✅ Apply `trustedCertificatesPem` in engine config
+   - Android: PEM parsing with CertificateFactory, custom KeyStore, SSLContext
+   - JVM: PEM parsing with CertificateFactory, custom TrustManager
+   - iOS: Infrastructure prepared, requires Kotlin/Native implementation
 
-### Phase 4: Move Metrics to Plugin ⏳ **PENDING**
+**Build Status:** ✅ BUILD SUCCESSFUL
+**Note:** iOS certificate handling requires platform-specific Kotlin/Native work (future task)
+
+### Phase 4: Move Metrics to Plugin ⏳ **PENDING** (Priority: HIGH)
 1. ❌ Create `plugins/metrics/api` module
-   - Target: `core/network/plugins/metrics/api/build.gradle.kts`
-2. ❌ Move `NetworkMetrics` interface to plugin API
-   - From: `core/network/core/api/metrics/NetworkMetrics.kt`
-   - To: `core/network/plugins/metrics/api/NetworkMetrics.kt`
+   - Target: `core/network/plugins/metrics/api/build.gradle.kts` (exists, no source files)
+2. ❌ Create `NetworkMetrics` interface in plugin API
+   - Target: `core/network/plugins/metrics/api/src/commonMain/.../NetworkMetrics.kt`
 3. ❌ Create `plugins/metrics/impl` module
-   - Target: `core/network/plugins/metrics/impl/build.gradle.kts`
-4. ❌ Move `NoOpNetworkMetrics` to plugin Impl
-   - From: `core/network/core/impl/metrics/NoOpNetworkMetrics.kt`
-   - To: `core/network/plugins/metrics/impl/NoOpNetworkMetrics.kt`
+   - Target: `core/network/plugins/metrics/impl/build.gradle.kts` (exists, no source files)
+4. ❌ Implement `NoOpNetworkMetrics` in plugin Impl
+   - Target: `core/network/plugins/metrics/impl/src/commonMain/.../NoOpNetworkMetrics.kt`
 5. ❌ Create metrics interceptors
-   - Target: `core/network/plugins/metrics/impl/MetricsInterceptors.kt`
-6. ❌ Delete metrics from core modules
-7. ❌ Update all references
+   - Target: `core/network/plugins/metrics/impl/src/commonMain/.../MetricsInterceptors.kt`
+   - `MetricsRequestInterceptor`, `MetricsResponseInterceptor`, `MetricsErrorInterceptor`
+6. ❌ Create DI module for metrics
+   - Target: `core/network/plugins/metrics/impl/src/commonMain/.../di/MetricsModule.kt`
 
-### Phase 5: Testing ⏳ **PENDING**
+### Phase 5: Testing ⏳ **PENDING** (Priority: MEDIUM)
 1. ❌ Unit tests for factory
 2. ❌ Unit tests for serialization (Multipart, Stream)
-3. ❌ Unit tests for security
+3. ❌ Unit tests for security (CertificatePinning)
 4. ❌ Integration tests with MockEngine
 5. ❌ Platform-specific tests
 
@@ -820,32 +836,277 @@ implementation(libs.kotlinx.coroutinesCore)
 - `plugins/metrics/impl/src/commonMain/kotlin/.../MetricsInterceptors.kt`
 - `plugins/metrics/impl/src/commonMain/kotlin/.../di/MetricsModule.kt`
 
-## 9. Next Steps After Core Completion
+## 9. Known Limitations (Updated: 2025-12-02)
 
-Once core primitives are complete:
+### 9.1 iOS Certificate Handling
+**Status:** ⚠️ Prepared but incomplete
 
-1. **REST Client Layer** (`clients/rest`)
-   - RestClient interface
-   - RestRequest DSL (using core primitives)
-   - Typed response deserialization
-   - Integration with CoreHttpClient via factory
+**Current State:**
+- Configuration hooks and infrastructure in place
+- TODO comments document integration points
+- Graceful fallback to system trust store works
 
-2. **WebSocket Client Layer** (`clients/websocket`)
-   - WebSocketClient interface
-   - Connection management
-   - Reconnection logic
+**What's Missing:**
+- Platform-specific PEM certificate parsing for Darwin
+- SecCertificate integration (requires Kotlin/Native interop)
+- CertificatePinner.Builder integration
+- SHA-256 hash extraction from PEM
 
-3. **SSE Client Layer** (`clients/sse`)
-   - SseClient interface
-   - Event parsing
-   - Last-Event-Id support
+**Recommendation:**
+Implement as separate task requiring:
+- Kotlin/Native expertise
+- Objective-C interop knowledge
+- Testing on actual iOS devices
 
-4. **Plugins** (auth, cache, logging)
-   - Auth plugin (Bearer, API Key, OAuth)
-   - Cache plugin (ETag, Last-Modified)
-   - Logging plugin (if needed as separate module)
+### 9.2 ProtoBuf Serialization
+**Status:** ⚠️ Optional - not implemented
 
-## 10. Summary
+**Current State:**
+- `ContentFormat.PROTOBUF` enum value defined
+- Engine configurations only support JSON
+
+**What's Missing:**
+- ProtoBuf ContentNegotiation plugin installation
+- Dependencies: `kotlinx-serialization-protobuf`, `ktor-serialization-kotlinx-protobuf`
+
+**Recommendation:**
+Add only when there's a concrete use case requiring binary serialization.
+
+### 9.3 Metrics Plugin
+**Status:** ❌ Module structure exists, no source files
+
+**Current State:**
+- `plugins/metrics/api/build.gradle.kts` and `impl/build.gradle.kts` exist
+- No Kotlin source files in either module
+
+**What's Missing:**
+- Complete implementation (see Phase 4 of Implementation Plan)
+
+**Recommendation:**
+Highest priority for next development phase.
+
+### 9.4 Testing Coverage
+**Status:** ❌ No tests
+
+**Current State:**
+- Core implementation compiles and builds successfully
+- No unit tests, integration tests, or platform-specific tests
+
+**What's Missing:**
+- Complete test suite (see Phase 5 of Implementation Plan)
+
+**Recommendation:**
+Add tests in parallel with Metrics plugin implementation.
+
+## 10. Next Steps - Revised Implementation Order
+
+### Strategy: Clients First → Plugins → Comprehensive Testing
+
+**Rationale:**
+- Clients provide core functionality and immediate value
+- Plugins add optional features on top of working clients
+- Comprehensive testing covers entire network module at the end
+
+---
+
+### Phase 1: REST Client Layer (Weeks 1-2) - Priority: CRITICAL
+
+**Goal:** Enable type-safe REST API consumption
+
+**Tasks:**
+- Type-safe REST API client
+- DSL for request building (`restRequest { }`)
+- Automatic JSON serialization/deserialization
+- Integration with CoreHttpClient via factory
+
+**Deliverables:**
+- Functional REST client with DSL
+- Basic error handling
+- Integration with existing APIs
+
+**Timeline:** 1-2 weeks
+
+---
+
+### Phase 2: Connectivity Monitor (Week 3, parallel to Phase 1) - Priority: HIGH
+
+**Goal:** Enable network state observation
+
+**Tasks:**
+- Platform-specific network state monitoring
+- Android: ConnectivityManager
+- iOS: NWPathMonitor (via Kotlin/Native)
+- JVM: NetworkInterface polling
+
+**Deliverables:**
+- Working connectivity monitor on all platforms
+- StateFlow-based reactive API
+- Integration examples
+
+**Timeline:** 1 week
+
+---
+
+### Phase 3: WebSocket Client Layer (Weeks 4-5) - Priority: HIGH
+
+**Goal:** Enable real-time bidirectional communication
+
+**Tasks:**
+- Bidirectional real-time communication
+- Connection lifecycle management
+- Auto-reconnection with exponential backoff
+- Ping/pong heartbeat
+- Message queuing during disconnect
+
+**Deliverables:**
+- Functional WebSocket client
+- Reconnection logic
+- Connection state management
+
+**Timeline:** 2 weeks
+
+---
+
+### Phase 4: SSE Client Layer (Week 6) - Priority: MEDIUM
+
+**Goal:** Enable server-to-client streaming
+
+**Tasks:**
+- Server-Sent Events (unidirectional streaming)
+- Event parsing (id, event, data, retry)
+- Last-Event-Id support for resuming
+- Auto-reconnect with configurable retry
+
+**Deliverables:**
+- Functional SSE client
+- Event parsing and resuming
+- Integration for LLM streaming
+
+**Timeline:** 1 week
+
+---
+
+### Phase 5: Metrics Plugin (Week 7) - Priority: HIGH
+
+**Goal:** Enable observability for all clients
+
+**Tasks:**
+- Implement `NetworkMetrics` interface
+- Create `NoOpNetworkMetrics` and `DefaultNetworkMetrics`
+- Implement metrics interceptors (Request, Response, Error)
+- Add Koin DI module
+- Platform-specific metrics export
+
+**Deliverables:**
+- Working metrics plugin
+- Integration with all clients
+- Metrics collection examples
+
+**Timeline:** 1 week
+
+---
+
+### Phase 6: Auth Plugin (Week 8) - Priority: HIGH
+
+**Goal:** Enable authentication for all clients
+
+**Tasks:**
+- Bearer token authentication
+- API key authentication
+- OAuth 2.0 flow support
+- Token refresh logic
+
+**Deliverables:**
+- Working auth plugin
+- Integration with REST client
+- Token management
+
+**Timeline:** 1 week
+
+---
+
+### Phase 7: Cache Plugin (Week 9) - Priority: MEDIUM
+
+**Goal:** Enable caching for REST client
+
+**Tasks:**
+- ETag support
+- Last-Modified support
+- In-memory cache
+- Optional disk cache
+
+**Deliverables:**
+- Working cache plugin
+- Cache invalidation logic
+- Performance improvements
+
+**Timeline:** 1 week
+
+---
+
+### Phase 8: Comprehensive Network Module Testing (Weeks 10-11) - Priority: CRITICAL
+
+**Goal:** Achieve 80%+ test coverage for entire network module
+
+**Scope:**
+- **Core Layer:**
+  - Unit tests for factory, serialization, security
+  - Integration tests with MockEngine
+  - Platform-specific tests (Android/JVM/iOS)
+
+- **Client Layer:**
+  - REST client: Request/response cycle, DSL, error handling
+  - WebSocket: Connection lifecycle, reconnection, message queuing
+  - SSE: Event parsing, Last-Event-Id, reconnection
+  - Connectivity: Platform-specific monitoring
+
+- **Plugin Layer:**
+  - Metrics: Interceptor chain, collection, export
+  - Auth: Token management, refresh, various auth types
+  - Cache: ETag/Last-Modified, invalidation
+
+- **Integration Tests:**
+  - Client + Plugin combinations
+  - Real API integration (httpbin.org, echo.websocket.org)
+  - Platform-specific scenarios
+  - Error scenarios and edge cases
+
+**Deliverables:**
+- 80%+ code coverage for network module
+- Automated test suite
+- Performance benchmarks
+- Test documentation
+
+**Timeline:** 2 weeks
+
+---
+
+### Phase 9: Documentation & Examples (Week 12) - Priority: MEDIUM
+
+**Goal:** Complete documentation and migration guides
+
+**Tasks:**
+- API documentation for all modules
+- Integration examples (client + plugin combinations)
+- Migration guides from legacy code
+- Performance benchmarks and optimization tips
+- Troubleshooting guides
+
+**Deliverables:**
+- Complete API documentation
+- Example projects
+- Migration guide
+- Best practices document
+
+**Timeline:** 1 week
+
+---
+
+**Total Estimated Timeline:** 12 weeks (3 months)
+
+**For detailed client implementation plan, see [CLIENTS_PLAN.md](./CLIENTS_PLAN.md).**
+
+## 11. Summary (Updated: 2025-12-02)
 
 This revised design follows the **"Core as Primitives Only"** philosophy:
 

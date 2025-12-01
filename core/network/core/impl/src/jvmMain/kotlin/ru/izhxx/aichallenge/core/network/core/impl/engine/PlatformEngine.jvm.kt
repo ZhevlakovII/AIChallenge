@@ -3,7 +3,6 @@ package ru.izhxx.aichallenge.core.network.core.impl.engine
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.engine.cio.CIOEngineConfig
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.network.tls.TLSConfigBuilder
@@ -14,7 +13,6 @@ import ru.izhxx.aichallenge.core.network.core.api.config.SerializationConfig
 import ru.izhxx.aichallenge.core.network.core.api.config.TimeoutConfig
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
-import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 

@@ -69,6 +69,7 @@ sealed class AppResult<out T> {
     }
 
     companion object {
+
         /**
          * Фабрика успешного результата.
          *
@@ -76,6 +77,7 @@ sealed class AppResult<out T> {
          * @return [AppResult.Success] с переданным значением.
          */
         fun <T> success(value: T): AppResult<T> = Success(value)
+
         /**
          * Фабрика неуспешного результата.
          *

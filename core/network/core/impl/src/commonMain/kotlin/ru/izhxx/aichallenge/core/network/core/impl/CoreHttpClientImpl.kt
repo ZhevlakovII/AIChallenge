@@ -3,39 +3,36 @@ package ru.izhxx.aichallenge.core.network.core.impl
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.HttpClientEngineFactory
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.ServerResponseException
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
-import io.ktor.http.HttpMethod as KtorHttpMethod
 import io.ktor.http.contentType
 import io.ktor.http.takeFrom
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.util.flattenEntries
 import kotlinx.serialization.json.Json
 import ru.izhxx.aichallenge.core.foundation.error.AppError
 import ru.izhxx.aichallenge.core.foundation.result.AppResult
 import ru.izhxx.aichallenge.core.foundation.safecall.suspendedSafeCall
 import ru.izhxx.aichallenge.core.network.core.api.CoreHttpClient
+import ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig
 import ru.izhxx.aichallenge.core.network.core.api.interceptor.ErrorInterceptor
+import ru.izhxx.aichallenge.core.network.core.api.interceptor.RequestInterceptor
+import ru.izhxx.aichallenge.core.network.core.api.interceptor.ResponseInterceptor
 import ru.izhxx.aichallenge.core.network.core.api.mapper.ErrorMapper
 import ru.izhxx.aichallenge.core.network.core.api.request.HttpMethod
 import ru.izhxx.aichallenge.core.network.core.api.request.RequestBody
 import ru.izhxx.aichallenge.core.network.core.api.request.RequestContext
-import ru.izhxx.aichallenge.core.network.core.api.interceptor.RequestInterceptor
 import ru.izhxx.aichallenge.core.network.core.api.request.RequestOptions
 import ru.izhxx.aichallenge.core.network.core.api.response.ResponseContext
-import ru.izhxx.aichallenge.core.network.core.api.interceptor.ResponseInterceptor
-import ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig
 import ru.izhxx.aichallenge.core.network.core.impl.config.MergedConfig
 import ru.izhxx.aichallenge.core.network.core.impl.engine.createConfiguredHttpClient
 import ru.izhxx.aichallenge.core.network.core.impl.engine.defaultEngineFactory
 import ru.izhxx.aichallenge.core.network.core.impl.mapper.DefaultErrorMapper
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import io.ktor.http.HttpMethod as KtorHttpMethod
 
 /**
  * Ktor-реализация CoreHttpClient для Core Transport Layer.
@@ -97,8 +94,11 @@ internal class CoreHttpClientImpl(
                     takeFrom("$base/$p")
                     // query params
                     reqCtx.query.forEach { (k, v) ->
-                        if (v == null) parameters.append(k, "")
-                        else parameters.append(k, v)
+                        if (v == null) {
+                            parameters.append(k, "")
+                        } else {
+                            parameters.append(k, v)
+                        }
                     }
                 }
                 // security headers (глобальные) + явные из RequestContext + per-request extras
@@ -196,7 +196,9 @@ internal class CoreHttpClientImpl(
 
                 is RequestBody.Multipart.Part.FileData -> {
                     // Add headers
-                    result.add("Content-Disposition: form-data; name=\"${part.name}\"; filename=\"${part.filename}\"".encodeToByteArray())
+                    result.add(
+                        "Content-Disposition: form-data; name=\"${part.name}\"; filename=\"${part.filename}\"".encodeToByteArray()
+                    )
                     result.add(crlf)
                     result.add("Content-Type: ${part.contentType}".encodeToByteArray())
                     result.add(crlf)

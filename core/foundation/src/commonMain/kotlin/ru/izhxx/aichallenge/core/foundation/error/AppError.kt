@@ -6,36 +6,43 @@ package ru.izhxx.aichallenge.core.foundation.error
  * и конкретные типы ошибок как вложенные типы для удобного API и стабильности ABI.
  */
 sealed interface AppError {
+
     /**
      * Категории ошибок. Стабильный набор для ABI.
      * Определяется бизнес-требованиями
      */
     val category: ErrorCategory
+
     /**
      * Машинно-читабельный код (ключ), используемый для дополнительной маршрутизации ошибок в UI.
      * Примеры: "network.timeout", "http.404", "domain.user.not_found".
      */
     val code: String
+
     /**
      * Уровень серьёзности ошибки, влияющий на обработку и сигнализацию в UI/логах.
      * См. [ErrorSeverity] для возможных значений.
      */
     val severity: ErrorSeverity
+
     /**
      * Набор флагов, описывающих поведение/природу ошибки.
      * Например: Transient/Retriable/Permanent.
      */
     val flags: Set<ErrorFlag>
+
     /**
      * Сырой текст ошибки для логов и диагностики (не локализованный).
      * Не должен содержать PII.
      */
     val rawMessage: String
+
     /**
      * Исходная причина (Throwable), если есть.
      * На iOS/JVM это общий KMP-Throwable.
      */
     val cause: Throwable?
+
     /**
      * Дополнительные структурные атрибуты (строковые), пригодны для логов и роутинга в UI.
      * Рекомендуется использовать неймспейсы ключей:

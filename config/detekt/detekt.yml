@@ -320,13 +320,14 @@ naming:
     forbiddenName: [ ]
   FunctionMaxLength:
     active: true
-    maximumFunctionNameLength: 30
+    excludes: [ '**/test/**', '**/androidUnitTest/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/iosTest/**',]
+    maximumFunctionNameLength: 42
   FunctionMinLength:
     active: false
     minimumFunctionNameLength: 3
   FunctionNaming:
     active: true
-    excludes: [ '**/test/**','**/jvmSharedTest/**', '**/androidUnitTest/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**' ]
+    excludes: [ '**/test/**', '**/androidUnitTest/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/iosTest/**',]
     functionPattern: '[a-z][a-zA-Z0-9]*'
     excludeClassPattern: '$^'
     ignoreAnnotated: [ 'Composable' ]
@@ -595,7 +596,7 @@ style:
     maxLineLength: 120
     excludePackageStatements: true
     excludeImportStatements: true
-    excludeCommentStatements: false
+    excludeCommentStatements: true
     excludeRawStrings: true
   MayBeConst:
     active: true

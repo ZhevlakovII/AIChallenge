@@ -1,13 +1,12 @@
 package ru.izhxx.aichallenge.core.network.core.api.request
 
-import ru.izhxx.aichallenge.core.network.core.api.interceptor.ErrorInterceptor
-import ru.izhxx.aichallenge.core.network.core.api.mapper.ErrorMapper
-import ru.izhxx.aichallenge.core.network.core.api.interceptor.ResponseInterceptor
 import ru.izhxx.aichallenge.core.network.core.api.config.LoggingConfig
-import ru.izhxx.aichallenge.core.network.core.api.config.TimeoutConfig
-import ru.izhxx.aichallenge.core.network.core.api.interceptor.RequestInterceptor
-import ru.izhxx.aichallenge.core.network.core.api.request.RequestBody
 import ru.izhxx.aichallenge.core.network.core.api.config.NetworkConfig
+import ru.izhxx.aichallenge.core.network.core.api.config.TimeoutConfig
+import ru.izhxx.aichallenge.core.network.core.api.interceptor.ErrorInterceptor
+import ru.izhxx.aichallenge.core.network.core.api.interceptor.RequestInterceptor
+import ru.izhxx.aichallenge.core.network.core.api.interceptor.ResponseInterceptor
+import ru.izhxx.aichallenge.core.network.core.api.mapper.ErrorMapper
 
 /**
  * Пер-запросные переопределения настроек Core Transport Layer.

@@ -17,6 +17,7 @@ import ru.izhxx.aichallenge.core.network.core.impl.mapper.DefaultErrorMapper
  * Creates CoreHttpClient instances with Ktor backend.
  */
 internal class HttpClientFactoryImpl : HttpClientFactory {
+
     override fun create(
         config: NetworkConfig,
         requestInterceptors: List<RequestInterceptor>,

@@ -14,7 +14,6 @@ import ru.izhxx.aichallenge.core.network.core.api.mapper.ErrorMapper
  * - Global configuration
  * - Custom interceptors and mappers
  *
- * Note: Does NOT take NetworkMetrics (moved to plugins).
  */
 interface HttpClientFactory {
     /**

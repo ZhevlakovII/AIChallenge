@@ -4,6 +4,7 @@ package ru.izhxx.aichallenge.core.foundation.error
  * Флаги поведения ошибки.
  */
 enum class ErrorFlag {
+
     /** Временная ошибка, может исчезнуть при повторе (например, нестабильная сеть). */
     Transient,
 
@@ -11,5 +12,5 @@ enum class ErrorFlag {
     Permanent,
 
     /** Ошибка, для которой допустима стратегия повторных попыток. */
-    Retriable,
+    Retriable
 }

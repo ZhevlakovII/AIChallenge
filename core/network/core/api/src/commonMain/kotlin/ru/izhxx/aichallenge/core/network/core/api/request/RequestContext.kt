@@ -1,7 +1,5 @@
 package ru.izhxx.aichallenge.core.network.core.api.request
 
-import ru.izhxx.aichallenge.core.network.core.api.request.HttpMethod
-
 /**
  * Непривязанное к реализации представление запроса для core-интерцепторов/логики.
  * Не содержит типов Ktor.

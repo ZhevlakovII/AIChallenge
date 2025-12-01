@@ -98,9 +98,10 @@ sealed interface RequestBody {
      *
      * Platform-specific implementation required.
      */
+    // TODO: Platform-specific channel/stream abstraction
     data class Stream(
         val contentLength: Long?,
         override val contentType: String?,
-        val provider: suspend () -> ByteArray // TODO: Platform-specific channel/stream abstraction
+        val provider: suspend () -> ByteArray
     ) : RequestBody
 }
