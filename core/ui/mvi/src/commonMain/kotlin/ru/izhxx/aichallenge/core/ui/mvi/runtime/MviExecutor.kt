@@ -53,7 +53,7 @@ import ru.izhxx.aichallenge.core.ui.mvi.model.MviResult
  * }
  * ```
  */
-public interface MviExecutor<I : MviIntent, R : MviResult, E : MviEffect> {
+interface MviExecutor<I : MviIntent, R : MviResult, E : MviEffect> {
     /**
      * Выполнить обработку входящего [intent].
      *
@@ -61,7 +61,7 @@ public interface MviExecutor<I : MviIntent, R : MviResult, E : MviEffect> {
      * @param emitResult коллбэк для эмиссии [MviResult], который будет свёрнут редьюсером в состояние.
      * @param emitEffect коллбэк для эмиссии одноразового [MviEffect] для UI.
      */
-    public suspend fun execute(
+    suspend fun execute(
         intent: I,
         emitResult: suspend (R) -> Unit,
         emitEffect: suspend (E) -> Unit

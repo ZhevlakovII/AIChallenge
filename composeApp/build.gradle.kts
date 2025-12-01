@@ -72,6 +72,7 @@ android {
     }
     buildTypes {
         getByName("release") {
+            // Отключаем R8 minify для стабильной сборки (проблемы с вырезанием RAG классов)
             isMinifyEnabled = true
         }
     }

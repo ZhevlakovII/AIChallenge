@@ -9,6 +9,7 @@ import ru.izhxx.aichallenge.domain.rag.RagSettingsRepository
 import ru.izhxx.aichallenge.domain.rag.RagIndexRepository
 import ru.izhxx.aichallenge.domain.rag.RagEmbedder
 import ru.izhxx.aichallenge.domain.rag.RagRetriever
+import ru.izhxx.aichallenge.data.rag.RagSearchPipeline
 
 /**
  * Реализация юзкейса отправки сообщения
@@ -73,31 +74,31 @@ class SendMessageUseCaseImpl(
             }
         }
 
-        // Эмбеддинг вопроса
-        val qEmbedding = try {
-            ragEmbedder.embed(text)
+        // Второй этап: пайплайн RAG (kNN -> rerank/cutoff -> topK)
+        val pipeline = RagSearchPipeline(
+            embedder = ragEmbedder,
+            retriever = ragRetriever
+        )
+        val chunks = try {
+            pipeline.retrieveChunks(
+                questionText = text,
+                index = index,
+                settings = ragSettings
+            )
         } catch (e: Throwable) {
-            return Result.failure(IllegalStateException("RAG: embedder недоступен: ${e.message}", e))
+            return Result.failure(IllegalStateException("RAG: pipeline ошибка: ${e.message}", e))
         }
 
-        // Поиск ближайших чанков
-        val retrieved = ragRetriever.retrieve(
-            questionEmbedding = qEmbedding,
-            index = index,
-            topK = ragSettings.topK,
-            minScore = ragSettings.minScore
-        )
-
-        if (retrieved.isEmpty()) {
+        if (chunks.isEmpty()) {
             // Нет релевантных чанков — отправляем без контекста
             return llmClientRepository.sendMessagesWithSummary(messagesForRequest, summary)
         }
 
         // Сборка контекстного блока
-        val contextBlock = ragRetriever.buildContext(
-            chunks = retrieved,
+        val contextBlock = pipeline.buildContext(
+            chunks = chunks,
             index = index,
-            maxTokens = ragSettings.maxContextTokens
+            settings = ragSettings
         )
 
         // Вставляем CONTEXT перед пользовательским вопросом
