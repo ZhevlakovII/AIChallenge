@@ -241,6 +241,71 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
             )
         ),
 
+        // Git инструменты
+        McpToolDTO(
+            name = "git.current_branch",
+            description = "Получить текущую ветку Git репозитория",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get current Git branch",
+                  "description": "Returns the name of the current branch in the Git repository.",
+                  "properties": {
+                    "repo_path": {
+                      "type": "string",
+                      "description": "Path to the Git repository (current directory if empty)",
+                      "default": "."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "git.last_commit",
+            description = "Получить информацию о последнем коммите (SHA, сообщение, автор, дата)",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get last Git commit",
+                  "description": "Returns detailed information about the last commit in the current branch.",
+                  "properties": {
+                    "repo_path": {
+                      "type": "string",
+                      "description": "Path to the Git repository",
+                      "default": "."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "git.commit_count",
+            description = "Получить количество коммитов в текущей ветке",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get Git commit count",
+                  "description": "Returns the total number of commits in the current branch.",
+                  "properties": {
+                    "repo_path": {
+                      "type": "string",
+                      "description": "Path to the Git repository",
+                      "default": "."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+
         // Новые локальные инструменты (без сети)
         McpToolDTO(
             name = "workspace.search_in_files",
@@ -388,6 +453,11 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
         "sum" -> handleSum(req, json, args, logger)
         "github.list_user_repos" -> handleGithubListUserRepos(req, json, args, http, logger)
         "github.list_my_repos" -> handleGithubListMyRepos(req, json, args, http, logger)
+
+        // Git инструменты
+        "git.current_branch" -> handleGitCurrentBranch(req, json, args, logger)
+        "git.last_commit" -> handleGitLastCommit(req, json, args, logger)
+        "git.commit_count" -> handleGitCommitCount(req, json, args, logger)
 
         // Новые локальные (без сети)
         "workspace.search_in_files" -> handleWorkspaceSearchInFiles(req, json, args, logger)
@@ -557,6 +627,126 @@ private suspend fun DefaultWebSocketServerSession.handleGithubListMyRepos(
     } else {
         val body = runCatching { response.bodyAsText() }.getOrDefault("")
         respondError(json, req.id, response.status.value, "GitHub API error (${response.status.value}): $body", logger)
+    }
+}
+
+// ======= GIT ИНСТРУМЕНТЫ =======
+
+private suspend fun DefaultWebSocketServerSession.handleGitCurrentBranch(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val repoPath = args?.get("repo_path")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: "."
+
+    try {
+        val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+            .directory(Paths.get(repoPath).toFile())
+            .redirectErrorStream(true)
+            .start()
+
+        val output = process.inputStream.bufferedReader().readText().trim()
+        val exitCode = process.waitFor()
+
+        if (exitCode == 0 && output.isNotEmpty()) {
+            val resultEl = buildJsonObject {
+                put("branch", JsonPrimitive(output))
+                put("repo_path", JsonPrimitive(repoPath))
+            }
+            respondResult(json, req.id, resultEl, logger)
+        } else {
+            respondError(json, req.id, -32001, "Failed to get Git branch: $output", logger)
+        }
+    } catch (e: Exception) {
+        respondError(json, req.id, -32000, "Git error: ${e.message}", logger)
+    }
+}
+
+private suspend fun DefaultWebSocketServerSession.handleGitLastCommit(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val repoPath = args?.get("repo_path")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: "."
+
+    try {
+        // Получить хеш коммита
+        val hashProcess = ProcessBuilder("git", "rev-parse", "HEAD")
+            .directory(Paths.get(repoPath).toFile())
+            .redirectErrorStream(true)
+            .start()
+
+        val hash = hashProcess.inputStream.bufferedReader().readText().trim()
+        if (hashProcess.waitFor() != 0) throw Exception("Failed to get commit hash")
+
+        // Получить сообщение коммита
+        val msgProcess = ProcessBuilder("git", "log", "-1", "--pretty=%B")
+            .directory(Paths.get(repoPath).toFile())
+            .redirectErrorStream(true)
+            .start()
+
+        val message = msgProcess.inputStream.bufferedReader().readText().trim()
+        if (msgProcess.waitFor() != 0) throw Exception("Failed to get commit message")
+
+        // Получить автора и дату
+        val authorProcess = ProcessBuilder("git", "log", "-1", "--pretty=%an|%ae|%aI")
+            .directory(Paths.get(repoPath).toFile())
+            .redirectErrorStream(true)
+            .start()
+
+        val authorInfo = authorProcess.inputStream.bufferedReader().readText().trim()
+        if (authorProcess.waitFor() != 0) throw Exception("Failed to get author info")
+
+        val (author, email, date) = authorInfo.split("|").let { parts ->
+            Triple(parts.getOrNull(0) ?: "", parts.getOrNull(1) ?: "", parts.getOrNull(2) ?: "")
+        }
+
+        val resultEl = buildJsonObject {
+            put("hash", JsonPrimitive(hash.take(7))) // Short hash
+            put("hash_full", JsonPrimitive(hash))
+            put("message", JsonPrimitive(message))
+            put("author", JsonPrimitive(author))
+            put("email", JsonPrimitive(email))
+            put("date", JsonPrimitive(date))
+            put("repo_path", JsonPrimitive(repoPath))
+        }
+        respondResult(json, req.id, resultEl, logger)
+    } catch (e: Exception) {
+        respondError(json, req.id, -32000, "Git error: ${e.message}", logger)
+    }
+}
+
+private suspend fun DefaultWebSocketServerSession.handleGitCommitCount(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    logger: Logger
+) {
+    val repoPath = args?.get("repo_path")?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: "."
+
+    try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+            .directory(Paths.get(repoPath).toFile())
+            .redirectErrorStream(true)
+            .start()
+
+        val output = process.inputStream.bufferedReader().readText().trim()
+        val exitCode = process.waitFor()
+
+        if (exitCode == 0 && output.isNotEmpty()) {
+            val count = output.toIntOrNull() ?: 0
+            val resultEl = buildJsonObject {
+                put("count", JsonPrimitive(count))
+                put("repo_path", JsonPrimitive(repoPath))
+            }
+            respondResult(json, req.id, resultEl, logger)
+        } else {
+            respondError(json, req.id, -32001, "Failed to get commit count: $output", logger)
+        }
+    } catch (e: Exception) {
+        respondError(json, req.id, -32000, "Git error: ${e.message}", logger)
     }
 }
 

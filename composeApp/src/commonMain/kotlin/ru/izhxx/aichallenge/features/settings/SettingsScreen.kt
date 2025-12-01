@@ -665,6 +665,94 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ============ RAG ИНДЕКСАЦИЯ ДОКУМЕНТОВ ============
+                Text(
+                    text = "Индексация документов",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Text(
+                    text = "Выберите папку с документацией (.md файлы) и нажмите 'Проиндексировать' для создания RAG индекса.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Путь к папке с документацией
+                OutlinedTextField(
+                    value = state.docsDirectory,
+                    onValueChange = { viewModel.updateDocsDirectory(it) },
+                    label = { Text("Папка с документацией") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isIndexing,
+                    singleLine = true,
+                    placeholder = { Text("Например: C:/Projects/docs") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Кнопка индексации
+                Button(
+                    onClick = { viewModel.indexDocuments() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isIndexing && state.docsDirectory.isNotBlank()
+                ) {
+                    if (state.isIndexing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Индексация...")
+                    } else {
+                        Text("Проиндексировать")
+                    }
+                }
+
+                // Прогресс индексации
+                state.indexingProgress?.let { progress ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = progress,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Успех индексации
+                state.indexingSuccess?.let { success ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Snackbar(
+                        modifier = Modifier.fillMaxWidth(),
+                        action = {
+                            TextButton(onClick = { viewModel.clearIndexingStatus() }) {
+                                Text("OK")
+                            }
+                        }
+                    ) {
+                        Text(success)
+                    }
+                }
+
+                // Ошибка индексации
+                state.indexingError?.let { error ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Snackbar(
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        action = {
+                            TextButton(onClick = { viewModel.clearIndexingStatus() }) {
+                                Text("OK")
+                            }
+                        }
+                    ) {
+                        Text(error)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Секция системного промпта
                 Text(
                     text = "Системный промпт",

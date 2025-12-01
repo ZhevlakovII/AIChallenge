@@ -19,12 +19,34 @@ import kotlin.io.path.isRegularFile
  * Реализация чтения контента из локальной файловой системы (только .md).
  */
 class FsContentReaderJvm : ContentReader {
+    companion object {
+        // Папки и файлы, которые нужно исключить из индексации
+        private val EXCLUDED_DIRS = setOf(
+            ".git",
+            ".idea",
+            ".gradle",
+            "node_modules",
+            "build",
+            "out",
+            ".kotlin",
+            "__pycache__"
+        )
+    }
+
     override fun scanMarkdownFiles(rootDir: String): List<FileEntry> {
         val root = Paths.get(rootDir).normalize().toAbsolutePath()
         if (!Files.exists(root)) return emptyList()
         val result = mutableListOf<FileEntry>()
         Files.walk(root).use { stream ->
-            stream.filter { it.isRegularFile() && it.fileName.toString().endsWith(".md", ignoreCase = true) }
+            stream
+                .filter { path ->
+                    // Исключаем файлы из запрещенных директорий
+                    val shouldExclude = path.any { part ->
+                        val name = part.fileName?.toString().orEmpty()
+                        name in EXCLUDED_DIRS || name.startsWith(".")
+                    }
+                    !shouldExclude && path.isRegularFile() && path.fileName.toString().endsWith(".md", ignoreCase = true)
+                }
                 .forEach { path ->
                     val rel = root.relativize(path).toString().replace(File.separatorChar, '/')
                     result.add(

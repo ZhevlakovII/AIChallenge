@@ -10,38 +10,22 @@ This is a **Kotlin Multiplatform** project implementing an AI Challenge applicat
 
 ### Build the Application
 ```bash
-# Windows
-.\gradlew.bat build
-
-# macOS/Linux
-./gradlew build
+./gradlew.bat build
 ```
 
 ### Run Android Application
 ```bash
-# Windows
-.\gradlew.bat :composeApp:assembleDebug
-
-# macOS/Linux
-./gradlew :composeApp:assembleDebug
+./gradlew.bat :composeApp:assembleDebug
 ```
 
 ### Run Desktop (JVM) Application
 ```bash
-# Windows
-.\gradlew.bat :composeApp:run
-
-# macOS/Linux
-./gradlew :composeApp:run
+./gradlew.bat :composeApp:run
 ```
 
 ### Run Server
 ```bash
-# Windows
-.\gradlew.bat :server:run
-
-# macOS/Linux
-./gradlew :server:run
+./gradlew.bat :server:run
 ```
 
 ### Code Quality & Analysis

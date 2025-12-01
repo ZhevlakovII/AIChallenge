@@ -18,6 +18,7 @@ import ru.izhxx.aichallenge.domain.rag.RagSettings
 import ru.izhxx.aichallenge.domain.rag.RerankSettings
 import ru.izhxx.aichallenge.domain.rag.RerankMode
 import ru.izhxx.aichallenge.domain.rag.CutoffMode
+import ru.izhxx.aichallenge.features.rag.domain.IndexRagDocumentsUseCase
 
 /**
  * ViewModel для экрана настроек
@@ -26,6 +27,7 @@ class SettingsViewModel(
     private val providerSettingsStore: ProviderSettingsRepository,
     private val lLMConfigRepository: LLMConfigRepository,
     private val ragSettingsRepository: RagSettingsRepository,
+    private val indexRagDocumentsUseCase: IndexRagDocumentsUseCase? = null
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -510,5 +512,102 @@ class SettingsViewModel(
      */
     fun clearError() {
         _state.update { it.copy(error = null) }
+    }
+
+    // ===== RAG Indexing =====
+
+    /**
+     * Обновляет путь к папке с документацией
+     */
+    fun updateDocsDirectory(path: String) {
+        _state.update { it.copy(docsDirectory = path) }
+    }
+
+    /**
+     * Запускает индексацию документов
+     */
+    fun indexDocuments() {
+        viewModelScope.launch {
+            if (indexRagDocumentsUseCase == null) {
+                _state.update {
+                    it.copy(indexingError = "Индексация недоступна на этой платформе")
+                }
+                return@launch
+            }
+
+            val docsDir = _state.value.docsDirectory
+            if (docsDir.isBlank()) {
+                _state.update {
+                    it.copy(indexingError = "Укажите папку с документацией")
+                }
+                return@launch
+            }
+
+            _state.update {
+                it.copy(
+                    isIndexing = true,
+                    indexingProgress = "Подготовка к индексации...",
+                    indexingError = null,
+                    indexingSuccess = null
+                )
+            }
+
+            try {
+                // Генерируем путь для сохранения индекса
+                val outputPath = "$docsDir/rag-index.json"
+
+                _state.update { it.copy(indexingProgress = "Индексация документов...") }
+
+                val result = indexRagDocumentsUseCase.indexDocuments(
+                    inputDir = docsDir,
+                    outputPath = outputPath,
+                    onProgress = { currentFile, progress ->
+                        _state.update {
+                            it.copy(indexingProgress = "Обработка: $currentFile (${(progress * 100).toInt()}%)")
+                        }
+                    }
+                )
+
+                result.onSuccess { index ->
+                    _state.update {
+                        it.copy(
+                            isIndexing = false,
+                            indexingProgress = null,
+                            indexingSuccess = "Индексация завершена! Документов: ${index.documents.size}, чанков: ${index.stats.chunks}. Индекс сохранен: $outputPath",
+                            ragIndexPath = outputPath // Автоматически устанавливаем путь к индексу
+                        )
+                    }
+                }.onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isIndexing = false,
+                            indexingProgress = null,
+                            indexingError = "Ошибка индексации: ${error.message}"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        isIndexing = false,
+                        indexingProgress = null,
+                        indexingError = "Неожиданная ошибка: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Очищает статус индексации
+     */
+    fun clearIndexingStatus() {
+        _state.update {
+            it.copy(
+                indexingSuccess = null,
+                indexingError = null,
+                indexingProgress = null
+            )
+        }
     }
 }
