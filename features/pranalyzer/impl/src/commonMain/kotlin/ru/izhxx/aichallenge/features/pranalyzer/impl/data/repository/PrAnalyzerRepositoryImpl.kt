@@ -235,6 +235,7 @@ class PrAnalyzerRepositoryImpl(
               "test_coverage_assessment": "Assessment of test coverage",
               "architectural_notes": "Notes about architectural decisions"
             }
+            Return the answer only following this structure.
         """.trimIndent()
     }
 
@@ -281,7 +282,7 @@ class PrAnalyzerRepositoryImpl(
         }}
             $docContext
 
-            Please analyze this PR and provide a comprehensive code review in the specified JSON format.
+            Please analyze this PR and provide a comprehensive code review.
         """.trimIndent()
     }
 
@@ -289,6 +290,24 @@ class PrAnalyzerRepositoryImpl(
      * Parses LLM JSON response to LlmAnalysis domain model
      */
     private fun parseLlmAnalysisResponse(llmResponse: String, prNumber: Int): LlmAnalysis {
+        if (llmResponse.first() != '{' && llmResponse.last() != '}') {
+            return LlmAnalysis(
+                prNumber = prNumber,
+                summary = llmResponse,
+                strengths = emptyList(),
+                weaknesses = emptyList(),
+                issues = emptyList(),
+                recommendations = emptyList(),
+                overallScore = 0,
+                readabilityScore = 0,
+                maintainabilityScore = 0,
+                securityScore = 0,
+                testCoverageAssessment = "",
+                architecturalNotes = "",
+                relevantDocumentation = emptyList() // Will be populated from RAG in future
+            )
+        }
+
         val jsonResponse = json.parseToJsonElement(llmResponse).jsonObject
 
         val issues = jsonResponse["issues"]?.jsonArray?.map { issueJson ->
