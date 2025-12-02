@@ -398,6 +398,128 @@ private fun buildMcpTools(json: Json): List<McpToolDTO> {
                 }
                 """.trimIndent()
             )
+        ),
+
+        // PR инструменты
+        McpToolDTO(
+            name = "pr.info",
+            description = "Получить метаинформацию о Pull Request (автор, описание, статус, файлы). Требуется GITHUB_TOKEN.",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get Pull Request info",
+                  "description": "Retrieve metadata about a GitHub Pull Request including author, description, status, and files.",
+                  "properties": {
+                    "owner": {
+                      "type": "string",
+                      "description": "Repository owner (username or organization)"
+                    },
+                    "repo": {
+                      "type": "string",
+                      "description": "Repository name"
+                    },
+                    "pr_number": {
+                      "type": "integer",
+                      "description": "Pull request number"
+                    }
+                  },
+                  "required": ["owner", "repo", "pr_number"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "pr.diff",
+            description = "Получить unified diff Pull Request. Требуется GITHUB_TOKEN.",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get Pull Request diff",
+                  "description": "Retrieve the unified diff of a GitHub Pull Request.",
+                  "properties": {
+                    "owner": {
+                      "type": "string",
+                      "description": "Repository owner (username or organization)"
+                    },
+                    "repo": {
+                      "type": "string",
+                      "description": "Repository name"
+                    },
+                    "pr_number": {
+                      "type": "integer",
+                      "description": "Pull request number"
+                    }
+                  },
+                  "required": ["owner", "repo", "pr_number"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "pr.files",
+            description = "Получить список измененных файлов в Pull Request. Требуется GITHUB_TOKEN.",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get Pull Request files",
+                  "description": "Retrieve the list of changed files in a GitHub Pull Request.",
+                  "properties": {
+                    "owner": {
+                      "type": "string",
+                      "description": "Repository owner (username or organization)"
+                    },
+                    "repo": {
+                      "type": "string",
+                      "description": "Repository name"
+                    },
+                    "pr_number": {
+                      "type": "integer",
+                      "description": "Pull request number"
+                    }
+                  },
+                  "required": ["owner", "repo", "pr_number"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
+        ),
+        McpToolDTO(
+            name = "pr.file_content",
+            description = "Получить содержимое конкретного файла из ветки Pull Request. Требуется GITHUB_TOKEN.",
+            inputSchema = json.parseToJsonElement(
+                """
+                {
+                  "type": "object",
+                  "title": "Get file content from PR branch",
+                  "description": "Retrieve the content of a specific file from a Pull Request branch.",
+                  "properties": {
+                    "owner": {
+                      "type": "string",
+                      "description": "Repository owner (username or organization)"
+                    },
+                    "repo": {
+                      "type": "string",
+                      "description": "Repository name"
+                    },
+                    "pr_number": {
+                      "type": "integer",
+                      "description": "Pull request number"
+                    },
+                    "file_path": {
+                      "type": "string",
+                      "description": "Path to the file in the repository"
+                    }
+                  },
+                  "required": ["owner", "repo", "pr_number", "file_path"],
+                  "additionalProperties": false
+                }
+                """.trimIndent()
+            )
         )
     )
 }
@@ -463,6 +585,12 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
         "workspace.search_in_files" -> handleWorkspaceSearchInFiles(req, json, args, logger)
         "textops.extract_todos" -> handleTextopsExtractTodos(req, json, args, logger)
         "mathops.aggregate_tasks" -> handleMathopsAggregateTasks(req, json, args, logger)
+
+        // PR инструменты
+        "pr.info" -> handlePrInfo(req, json, args, http, logger)
+        "pr.diff" -> handlePrDiff(req, json, args, http, logger)
+        "pr.files" -> handlePrFiles(req, json, args, http, logger)
+        "pr.file_content" -> handlePrFileContent(req, json, args, http, logger)
 
         else -> respondError(json, req.id, -32601, "Unknown tool: $toolName", logger)
     }
@@ -994,6 +1122,233 @@ private suspend fun DefaultWebSocketServerSession.handleMathopsAggregateTasks(
         })
     }
     respondResult(json, req.id, resultEl, logger)
+}
+
+// ======= PR ИНСТРУМЕНТЫ =======
+
+private suspend fun DefaultWebSocketServerSession.handlePrInfo(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    http: HttpClient,
+    logger: Logger
+) {
+    val owner = args?.get("owner")?.jsonPrimitive?.content
+    val repo = args?.get("repo")?.jsonPrimitive?.content
+    val prNumber = args?.get("pr_number")?.jsonPrimitive?.intOrNull
+
+    if (owner.isNullOrBlank() || repo.isNullOrBlank() || prNumber == null) {
+        respondError(json, req.id, -32602, "Invalid params: 'owner', 'repo', and 'pr_number' are required", logger)
+        return
+    }
+
+    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    if (token.isEmpty()) {
+        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        return
+    }
+
+    val url = "https://api.github.com/repos/$owner/$repo/pulls/$prNumber"
+    val response: HttpResponse = http.get(url) {
+        header("Accept", "application/vnd.github+json")
+        header("X-GitHub-Api-Version", "2022-11-28")
+        header("Authorization", "Bearer $token")
+    }
+
+    if (response.status.isSuccess()) {
+        val body = response.bodyAsText()
+        val prData = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
+        if (prData != null) {
+            val resultEl = buildJsonObject {
+                put("number", prData["number"] ?: JsonPrimitive(prNumber))
+                put("title", prData["title"] ?: JsonPrimitive(""))
+                put("state", prData["state"] ?: JsonPrimitive(""))
+                put("user", prData["user"] ?: buildJsonObject {})
+                put("body", prData["body"] ?: JsonPrimitive(""))
+                put("created_at", prData["created_at"] ?: JsonPrimitive(""))
+                put("updated_at", prData["updated_at"] ?: JsonPrimitive(""))
+                put("merged_at", prData["merged_at"] ?: JsonPrimitive(null))
+                put("head", prData["head"] ?: buildJsonObject {})
+                put("base", prData["base"] ?: buildJsonObject {})
+                put("mergeable", prData["mergeable"] ?: JsonPrimitive(null))
+                put("mergeable_state", prData["mergeable_state"] ?: JsonPrimitive(""))
+                put("changed_files", prData["changed_files"] ?: JsonPrimitive(0))
+                put("additions", prData["additions"] ?: JsonPrimitive(0))
+                put("deletions", prData["deletions"] ?: JsonPrimitive(0))
+                put("commits", prData["commits"] ?: JsonPrimitive(0))
+            }
+            respondResult(json, req.id, resultEl, logger)
+        } else {
+            respondError(json, req.id, -32001, "Failed to parse PR data", logger)
+        }
+    } else {
+        val body = runCatching { response.bodyAsText() }.getOrDefault("")
+        respondError(json, req.id, response.status.value, "GitHub API error (${response.status.value}): $body", logger)
+    }
+}
+
+private suspend fun DefaultWebSocketServerSession.handlePrDiff(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    http: HttpClient,
+    logger: Logger
+) {
+    val owner = args?.get("owner")?.jsonPrimitive?.content
+    val repo = args?.get("repo")?.jsonPrimitive?.content
+    val prNumber = args?.get("pr_number")?.jsonPrimitive?.intOrNull
+
+    if (owner.isNullOrBlank() || repo.isNullOrBlank() || prNumber == null) {
+        respondError(json, req.id, -32602, "Invalid params: 'owner', 'repo', and 'pr_number' are required", logger)
+        return
+    }
+
+    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    if (token.isEmpty()) {
+        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        return
+    }
+
+    val url = "https://api.github.com/repos/$owner/$repo/pulls/$prNumber"
+    val response: HttpResponse = http.get(url) {
+        header("Accept", "application/vnd.github.v3.diff")
+        header("X-GitHub-Api-Version", "2022-11-28")
+        header("Authorization", "Bearer $token")
+    }
+
+    if (response.status.isSuccess()) {
+        val diff = response.bodyAsText()
+        val resultEl = buildJsonObject {
+            put("diff", JsonPrimitive(diff))
+        }
+        respondResult(json, req.id, resultEl, logger)
+    } else {
+        val body = runCatching { response.bodyAsText() }.getOrDefault("")
+        respondError(json, req.id, response.status.value, "GitHub API error (${response.status.value}): $body", logger)
+    }
+}
+
+private suspend fun DefaultWebSocketServerSession.handlePrFiles(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    http: HttpClient,
+    logger: Logger
+) {
+    val owner = args?.get("owner")?.jsonPrimitive?.content
+    val repo = args?.get("repo")?.jsonPrimitive?.content
+    val prNumber = args?.get("pr_number")?.jsonPrimitive?.intOrNull
+
+    if (owner.isNullOrBlank() || repo.isNullOrBlank() || prNumber == null) {
+        respondError(json, req.id, -32602, "Invalid params: 'owner', 'repo', and 'pr_number' are required", logger)
+        return
+    }
+
+    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    if (token.isEmpty()) {
+        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        return
+    }
+
+    val url = "https://api.github.com/repos/$owner/$repo/pulls/$prNumber/files"
+    val response: HttpResponse = http.get(url) {
+        header("Accept", "application/vnd.github+json")
+        header("X-GitHub-Api-Version", "2022-11-28")
+        header("Authorization", "Bearer $token")
+    }
+
+    if (response.status.isSuccess()) {
+        val body = response.bodyAsText()
+        val filesArray = runCatching { json.parseToJsonElement(body).jsonArray }.getOrNull()
+        if (filesArray != null) {
+            val resultEl = buildJsonObject {
+                put("files", filesArray)
+            }
+            respondResult(json, req.id, resultEl, logger)
+        } else {
+            respondError(json, req.id, -32001, "Failed to parse files data", logger)
+        }
+    } else {
+        val body = runCatching { response.bodyAsText() }.getOrDefault("")
+        respondError(json, req.id, response.status.value, "GitHub API error (${response.status.value}): $body", logger)
+    }
+}
+
+private suspend fun DefaultWebSocketServerSession.handlePrFileContent(
+    req: RpcRequest,
+    json: Json,
+    args: Map<String, JsonElement>?,
+    http: HttpClient,
+    logger: Logger
+) {
+    val owner = args?.get("owner")?.jsonPrimitive?.content
+    val repo = args?.get("repo")?.jsonPrimitive?.content
+    val prNumber = args?.get("pr_number")?.jsonPrimitive?.intOrNull
+    val filePath = args?.get("file_path")?.jsonPrimitive?.content
+
+    if (owner.isNullOrBlank() || repo.isNullOrBlank() || prNumber == null || filePath.isNullOrBlank()) {
+        respondError(json, req.id, -32602, "Invalid params: 'owner', 'repo', 'pr_number', and 'file_path' are required", logger)
+        return
+    }
+
+    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    if (token.isEmpty()) {
+        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        return
+    }
+
+    // Step 1: Get PR info to extract the head ref
+    val prUrl = "https://api.github.com/repos/$owner/$repo/pulls/$prNumber"
+    val prResponse: HttpResponse = http.get(prUrl) {
+        header("Accept", "application/vnd.github+json")
+        header("X-GitHub-Api-Version", "2022-11-28")
+        header("Authorization", "Bearer $token")
+    }
+
+    if (!prResponse.status.isSuccess()) {
+        val body = runCatching { prResponse.bodyAsText() }.getOrDefault("")
+        respondError(json, req.id, prResponse.status.value, "GitHub API error getting PR info (${prResponse.status.value}): $body", logger)
+        return
+    }
+
+    val prData = runCatching { json.parseToJsonElement(prResponse.bodyAsText()).jsonObject }.getOrNull()
+    val headRef = prData?.get("head")?.jsonObject?.get("ref")?.jsonPrimitive?.content
+
+    if (headRef.isNullOrBlank()) {
+        respondError(json, req.id, -32001, "Failed to extract head ref from PR", logger)
+        return
+    }
+
+    // Step 2: Get file content using the ref
+    val contentUrl = "https://api.github.com/repos/$owner/$repo/contents/$filePath"
+    val contentResponse: HttpResponse = http.get(contentUrl) {
+        parameter("ref", headRef)
+        header("Accept", "application/vnd.github+json")
+        header("X-GitHub-Api-Version", "2022-11-28")
+        header("Authorization", "Bearer $token")
+    }
+
+    if (contentResponse.status.isSuccess()) {
+        val body = contentResponse.bodyAsText()
+        val contentData = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
+        if (contentData != null) {
+            val resultEl = buildJsonObject {
+                put("name", contentData["name"] ?: JsonPrimitive(""))
+                put("path", contentData["path"] ?: JsonPrimitive(filePath))
+                put("sha", contentData["sha"] ?: JsonPrimitive(""))
+                put("size", contentData["size"] ?: JsonPrimitive(0))
+                put("content", contentData["content"] ?: JsonPrimitive(""))
+                put("encoding", contentData["encoding"] ?: JsonPrimitive(""))
+                put("ref", JsonPrimitive(headRef))
+            }
+            respondResult(json, req.id, resultEl, logger)
+        } else {
+            respondError(json, req.id, -32001, "Failed to parse file content data", logger)
+        }
+    } else {
+        val body = runCatching { contentResponse.bodyAsText() }.getOrDefault("")
+        respondError(json, req.id, contentResponse.status.value, "GitHub API error getting file content (${contentResponse.status.value}): $body", logger)
+    }
 }
 
 // ======= ОБЩИЕ УТИЛИТЫ ОТВЕТА =======
