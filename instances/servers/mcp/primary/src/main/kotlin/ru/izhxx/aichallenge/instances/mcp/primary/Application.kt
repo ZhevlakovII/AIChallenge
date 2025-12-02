@@ -596,6 +596,38 @@ private suspend fun DefaultWebSocketServerSession.handleToolsCall(
     }
 }
 
+/**
+ * Читает GitHub токен из файла секрета в репозитории.
+ * Ожидаемый путь: config/secrets/github_token.txt в корне репозитория.
+ */
+private fun readGithubTokenFromSecrets(): String {
+    fun findRepoRoot(start: Path = Paths.get("").toAbsolutePath().normalize()): Path? {
+        var cur = start
+        repeat(20) {
+            val dotGit = cur.resolve(".git")
+            val gradlew = cur.resolve("gradlew")
+            val settings = cur.resolve("settings.gradle.kts")
+            if (Files.isDirectory(dotGit) || Files.exists(gradlew) || Files.exists(settings)) return cur
+            cur = cur.parent ?: return null
+        }
+        return null
+    }
+
+    val root = findRepoRoot() ?: Paths.get("").toAbsolutePath().normalize()
+    val candidate = root.resolve("config/secrets/github_token.txt")
+    return try {
+        if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
+            val content = Files.readAllBytes(candidate)
+            val token = String(content, StandardCharsets.UTF_8).trim()
+            if (token.isNotEmpty()) token else ""
+        } else {
+            ""
+        }
+    } catch (_: Exception) {
+        ""
+    }
+}
+
 // ======= СТАРЫЕ ОБРАБОТЧИКИ =======
 
 private suspend fun DefaultWebSocketServerSession.handleHealthCheck(
@@ -731,9 +763,9 @@ private suspend fun DefaultWebSocketServerSession.handleGithubListMyRepos(
     val perPage = args?.get("per_page")?.jsonPrimitive?.intOrNull ?: 20
     val sort = args?.get("sort")?.jsonPrimitive?.content ?: "updated"
     val visibility = args?.get("visibility")?.jsonPrimitive?.content ?: "all"
-    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    val token = readGithubTokenFromSecrets()
     if (token.isEmpty()) {
-        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        respondError(json, req.id, -32000, "GitHub token not configured on server (file: config/secrets/github_token.txt)", logger)
         return
     }
 
@@ -1142,9 +1174,9 @@ private suspend fun DefaultWebSocketServerSession.handlePrInfo(
         return
     }
 
-    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    val token = readGithubTokenFromSecrets()
     if (token.isEmpty()) {
-        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        respondError(json, req.id, -32000, "GitHub token not configured on server (file: config/secrets/github_token.txt)", logger)
         return
     }
 
@@ -1203,9 +1235,9 @@ private suspend fun DefaultWebSocketServerSession.handlePrDiff(
         return
     }
 
-    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    val token = readGithubTokenFromSecrets()
     if (token.isEmpty()) {
-        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        respondError(json, req.id, -32000, "GitHub token not configured on server (file: config/secrets/github_token.txt)", logger)
         return
     }
 
@@ -1244,9 +1276,9 @@ private suspend fun DefaultWebSocketServerSession.handlePrFiles(
         return
     }
 
-    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    val token = readGithubTokenFromSecrets()
     if (token.isEmpty()) {
-        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        respondError(json, req.id, -32000, "GitHub token not configured on server (file: config/secrets/github_token.txt)", logger)
         return
     }
 
@@ -1291,9 +1323,9 @@ private suspend fun DefaultWebSocketServerSession.handlePrFileContent(
         return
     }
 
-    val token = System.getenv("GITHUB_TOKEN")?.trim().orEmpty()
+    val token = readGithubTokenFromSecrets()
     if (token.isEmpty()) {
-        respondError(json, req.id, -32000, "GitHub token not configured on server (GITHUB_TOKEN)", logger)
+        respondError(json, req.id, -32000, "GitHub token not configured on server (file: config/secrets/github_token.txt)", logger)
         return
     }
 
