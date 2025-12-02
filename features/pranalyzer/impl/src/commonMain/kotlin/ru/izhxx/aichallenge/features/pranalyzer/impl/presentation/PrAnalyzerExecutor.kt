@@ -1,9 +1,5 @@
 package ru.izhxx.aichallenge.features.pranalyzer.impl.presentation
 
-import kotlinx.datetime.Clock
-import ru.izhxx.aichallenge.core.ui.mvi.model.MviEffect
-import ru.izhxx.aichallenge.core.ui.mvi.model.MviIntent
-import ru.izhxx.aichallenge.core.ui.mvi.model.MviResult
 import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviExecutor
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.usecase.AnalyzePrWithLlmUseCase
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.usecase.FetchPrDiffUseCase
@@ -15,11 +11,14 @@ import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.Analysis
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerEffect
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerIntent
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerResult
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * MVI Executor for PR Analyzer
  * Handles all side effects and business logic execution
  */
+@ExperimentalTime
 class PrAnalyzerExecutor(
     private val fetchPrInfoUseCase: FetchPrInfoUseCase,
     private val fetchPrDiffUseCase: FetchPrDiffUseCase,

@@ -27,6 +27,10 @@ kotlin {
             implementation(libs.koin.androidx.compose)
         }
         commonMain.dependencies {
+            implementation(projects.features.pranalyzer.api)
+            implementation(projects.features.pranalyzer.impl)
+            implementation(projects.core.ui.navigation)
+
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)

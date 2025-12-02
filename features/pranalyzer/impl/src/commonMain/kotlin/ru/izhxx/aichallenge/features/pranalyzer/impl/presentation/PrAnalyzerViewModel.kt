@@ -16,6 +16,7 @@ import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyz
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerIntent
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerResult
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerState
+import kotlin.time.ExperimentalTime
 
 /**
  * MVI ViewModel for PR Analyzer screen
@@ -23,6 +24,7 @@ import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyz
  * Orchestrates the MVI pipeline:
  * Intent → Executor → Result/Effect → Reducer → State → UI
  */
+@ExperimentalTime
 class PrAnalyzerViewModel(
     private val executor: PrAnalyzerExecutor
 ) : ViewModel(), MviViewModel<PrAnalyzerIntent, PrAnalyzerResult, PrAnalyzerState, PrAnalyzerEffect> {

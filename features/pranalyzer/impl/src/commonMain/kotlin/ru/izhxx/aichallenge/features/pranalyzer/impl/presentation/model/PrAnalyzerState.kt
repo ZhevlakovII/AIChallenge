@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalTime::class)
 package ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model
 
 import kotlinx.datetime.Instant
@@ -6,6 +7,7 @@ import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.model.IssueCategory
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.model.IssueSeverity
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.model.PrState
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.model.RecommendationPriority
+import kotlin.time.ExperimentalTime
 
 /**
  * UI state for PR Analyzer screen

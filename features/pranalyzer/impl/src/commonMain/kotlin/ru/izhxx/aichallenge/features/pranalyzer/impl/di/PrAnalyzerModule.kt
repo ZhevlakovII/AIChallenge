@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.features.pranalyzer.impl.di
 
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import ru.izhxx.aichallenge.features.pranalyzer.impl.data.datasource.LlmAnalysisDataSource
@@ -23,10 +24,12 @@ import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.usecase.SearchReleva
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.PrAnalyzerExecutor
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.PrAnalyzerViewModel
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.mapper.PrAnalysisUiMapper
+import kotlin.time.ExperimentalTime
 
 /**
  * Koin DI module for PR Analyzer feature
  */
+@OptIn(ExperimentalTime::class)
 val prAnalyzerModule = module {
     // Data Layer - Data Sources
     singleOf(::PrMcpDataSourceImpl) bind PrMcpDataSource::class
@@ -49,5 +52,5 @@ val prAnalyzerModule = module {
     factoryOf(::PrAnalyzerExecutor)
 
     // Presentation Layer - ViewModel
-    factoryOf(::PrAnalyzerViewModel)
+    viewModel { PrAnalyzerViewModel(get()) }
 }
