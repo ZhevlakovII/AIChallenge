@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.mcp.orchestrator
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import ru.izhxx.aichallenge.domain.model.mcp.McpServerConfig
+import ru.izhxx.aichallenge.domain.repository.McpServersRepository
 import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
 
 /**
@@ -9,7 +10,8 @@ import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
  * На перестроении реестра опрашивает каждый сервер (tools/list) и строит карту toolName -> wsUrl.
  */
 class PolicyBasedMcpRouter(
-    private val mcpRepository: McpRepository
+    private val mcpRepository: McpRepository,
+    private val mcpServersRepository: McpServersRepository
 ) : McpRouter {
 
     // Храним актуальный слепок реестра
@@ -31,7 +33,12 @@ class PolicyBasedMcpRouter(
         return _registry.value
     }
 
-    override suspend fun resolve(toolName: String): String? = _registry.value[toolName]
+    override suspend fun resolve(toolName: String): String? {
+        if (_registry.value.isEmpty()) {
+            rebuildRegistry(mcpServersRepository.getServers())
+        }
+        return _registry.value[toolName]
+    }
 
     override suspend fun registry(): Map<String, String> = _registry.value
 }

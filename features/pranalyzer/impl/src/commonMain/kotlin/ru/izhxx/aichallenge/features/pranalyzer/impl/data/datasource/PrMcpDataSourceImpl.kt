@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
+import ru.izhxx.aichallenge.mcp.orchestrator.McpRouter
 
 /**
  * Implementation of PrMcpDataSource using existing McpRepository
@@ -17,12 +18,13 @@ import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
  */
 class PrMcpDataSourceImpl(
     private val mcpRepository: McpRepository,
-    private val mcpServerUrl: String,
+    private val mcpRouter: McpRouter,
     private val json: Json
 ) : PrMcpDataSource {
 
     override suspend fun getPrInfo(prUrl: String): Result<JsonObject> = runCatching {
         val (owner, repo, prNumber) = parsePrUrl(prUrl)
+        val mcpServerUrl = mcpRouter.resolve("pr.info").orEmpty()
 
         // Build arguments for pr.info MCP tool
         val args = buildJsonObject {
@@ -41,6 +43,7 @@ class PrMcpDataSourceImpl(
 
     override suspend fun getPrDiff(prUrl: String): Result<String> = runCatching {
         val (owner, repo, prNumber) = parsePrUrl(prUrl)
+        val mcpServerUrl = mcpRouter.resolve("pr.diff").orEmpty()
 
         // Build arguments for pr.diff MCP tool
         val args = buildJsonObject {
@@ -60,6 +63,7 @@ class PrMcpDataSourceImpl(
 
     override suspend fun getPrFiles(prUrl: String): Result<List<JsonObject>> = runCatching {
         val (owner, repo, prNumber) = parsePrUrl(prUrl)
+        val mcpServerUrl = mcpRouter.resolve("pr.files").orEmpty()
 
         // Build arguments for pr.files MCP tool
         val args = buildJsonObject {
@@ -79,6 +83,7 @@ class PrMcpDataSourceImpl(
 
     override suspend fun getFileContent(prUrl: String, filePath: String): Result<String> = runCatching {
         val (owner, repo, prNumber) = parsePrUrl(prUrl)
+        val mcpServerUrl = mcpRouter.resolve("pr.file_content").orEmpty()
 
         // Build arguments for pr.file_content MCP tool
         val args = buildJsonObject {
