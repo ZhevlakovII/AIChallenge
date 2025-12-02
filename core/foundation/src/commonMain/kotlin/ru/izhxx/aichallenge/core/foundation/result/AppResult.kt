@@ -69,7 +69,6 @@ sealed class AppResult<out T> {
     }
 
     companion object {
-
         /**
          * Фабрика успешного результата.
          *

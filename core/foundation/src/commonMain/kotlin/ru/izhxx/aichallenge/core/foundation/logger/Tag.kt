@@ -33,13 +33,13 @@ value class Tag private constructor(val value: String) {
          * тем самым явно подсвечивая ограничение на этапе разработки.
          */
         fun of(raw: String): Tag {
-            val v = raw.trim()
-            require(v.isNotEmpty()) { "Tag must not be blank" }
-            require(v.length <= MAX_LENGTH) {
-                "Tag length (${v.length}) exceeds MAX_LENGTH=$MAX_LENGTH. " +
+            val value = raw.trim()
+            require(value.isNotEmpty()) { "Tag must not be blank" }
+            require(value.length <= MAX_LENGTH) {
+                "Tag length (${value.length}) exceeds MAX_LENGTH=$MAX_LENGTH. " +
                     "Use Tag.ofTruncated(...) if truncation is acceptable."
             }
-            return Tag(v)
+            return Tag(value)
         }
 
         /**
@@ -50,16 +50,16 @@ value class Tag private constructor(val value: String) {
             raw: String,
             onTruncate: ((original: String, truncated: String) -> Unit)? = null
         ): Tag {
-            val v = raw.trim()
-            require(v.isNotEmpty()) { "Tag must not be blank" }
-            val t = if (v.length <= MAX_LENGTH) {
-                v
+            val value = raw.trim()
+            require(value.isNotEmpty()) { "Tag must not be blank" }
+            val truncatedValue = if (value.length <= MAX_LENGTH) {
+                value
             } else {
-                v.take(MAX_LENGTH).also {
-                    onTruncate?.invoke(v, it)
+                value.take(MAX_LENGTH).also {
+                    onTruncate?.invoke(value, it)
                 }
             }
-            return Tag(t)
+            return Tag(truncatedValue)
         }
     }
 }

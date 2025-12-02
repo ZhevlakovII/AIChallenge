@@ -1,5 +1,10 @@
 package ru.izhxx.aichallenge.core.foundation.logger
 
+import ru.izhxx.aichallenge.core.foundation.logger.LogLevel.ERROR
+import ru.izhxx.aichallenge.core.foundation.logger.LogLevel.NONE
+import ru.izhxx.aichallenge.core.foundation.logger.LogLevel.WARN
+
+
 /**
  * Уровни логирования.
  *
@@ -8,7 +13,6 @@ package ru.izhxx.aichallenge.core.foundation.logger
  * - Release-сборки: только [WARN] и [ERROR].
  */
 enum class LogLevel {
-
     /** Детальная трассировка исполнения, самый «шумный» уровень. */
     TRACE,
 

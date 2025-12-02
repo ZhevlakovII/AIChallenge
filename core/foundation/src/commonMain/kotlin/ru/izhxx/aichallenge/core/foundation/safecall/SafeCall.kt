@@ -1,6 +1,7 @@
 package ru.izhxx.aichallenge.core.foundation.safecall
 
 import ru.izhxx.aichallenge.core.foundation.error.AppError
+import ru.izhxx.aichallenge.core.foundation.error.MetadataKeys
 import ru.izhxx.aichallenge.core.foundation.result.AppResult
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -53,7 +54,7 @@ inline fun <T> safeCall(
  * @see AppError
  */
 suspend inline fun <T> suspendedSafeCall(
-    crossinline throwableMapper: (suspend (Throwable) -> AppError),
+    crossinline throwableMapper: (Throwable) -> AppError = { t -> defaultUnknownError(t) },
     crossinline block: suspend () -> T
 ): AppResult<T> {
     return try {
@@ -71,19 +72,19 @@ suspend inline fun <T> suspendedSafeCall(
  *
  * Используется как значение по умолчанию для [throwableMapper] в [suspendedSafeCall].
  * Устанавливает rawMessage из [Throwable.message] (или toString), сохраняет [Throwable] в [AppError.UnknownError.cause]
- * и добавляет [AppError.MetadataKeys.ORIGIN] для трассировки источника.
+ * и добавляет [MetadataKeys.ORIGIN] для трассировки источника.
  *
  * @param t Исключение‑источник.
  * @return [AppError.UnknownError] с заполненными полями.
  *
  * @see AppError.UnknownError
- * @see AppError.MetadataKeys.ORIGIN
+ * @see MetadataKeys.ORIGIN
  */
 @PublishedApi
 internal fun defaultUnknownError(t: Throwable): AppError {
     return AppError.UnknownError(
         rawMessage = t.message ?: t.toString(),
         cause = t,
-        metadata = mapOf(AppError.MetadataKeys.ORIGIN to "core.foundation.safecall")
+        metadata = mapOf(MetadataKeys.ORIGIN to "core.foundation.safecall")
     )
 }

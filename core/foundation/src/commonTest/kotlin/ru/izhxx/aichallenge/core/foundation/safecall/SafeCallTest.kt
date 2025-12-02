@@ -2,6 +2,7 @@ package ru.izhxx.aichallenge.core.foundation.safecall
 
 import kotlinx.coroutines.test.runTest
 import ru.izhxx.aichallenge.core.foundation.error.AppError
+import ru.izhxx.aichallenge.core.foundation.error.MetadataKeys
 import ru.izhxx.aichallenge.core.foundation.result.AppResult
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
@@ -42,7 +43,7 @@ class SafeCallTest {
         assertEquals(ex, error.cause)
         assertEquals(
             "core.foundation.safecall",
-            error.metadata[AppError.MetadataKeys.ORIGIN],
+            error.metadata[MetadataKeys.ORIGIN],
             "Default mapper must set ORIGIN metadata"
         )
         assertEquals("unknown.unexpected", error.code)
@@ -59,13 +60,7 @@ class SafeCallTest {
 
     @Test
     fun `suspendedSafeCall success returns Success`() = runTest {
-        val mapped = AppError.DomainError(code = "domain.bad", rawMessage = "mapped")
-
-        val result = suspendedSafeCall(
-            throwableMapper = { t ->
-                mapped
-            }
-        ) { "ok" }
+        val result = suspendedSafeCall { "ok" }
 
         assertTrue(result is AppResult.Success)
         assertEquals("ok", result.value)
@@ -91,14 +86,9 @@ class SafeCallTest {
 
     @Test
     fun `suspendedSafeCall rethrows CancellationException`() = runTest {
-        val mapped = AppError.DomainError(code = "domain.bad", rawMessage = "mapped")
 
         assertFailsWith<CancellationException> {
-            suspendedSafeCall(
-                throwableMapper = { t ->
-                    mapped
-                }
-            ) { throw CancellationException("cancel-s") }
+            suspendedSafeCall { throw CancellationException("cancel-s") }
         }
     }
 }

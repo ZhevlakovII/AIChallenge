@@ -4,7 +4,6 @@ package ru.izhxx.aichallenge.core.foundation.error
  * Категории ошибок. Стабильный набор для ABI.
  */
 enum class ErrorCategory {
-
     /** Сетевой уровень: проблемы соединения, DNS/TLS, транспорт. */
     Network,
 

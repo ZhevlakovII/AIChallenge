@@ -4,7 +4,6 @@ package ru.izhxx.aichallenge.core.foundation.error
  * Уровень серьёзности ошибки.
  */
 enum class ErrorSeverity {
-
     /** Информационное событие; операция завершена, возможен ненавязчивый сигнал в UI. */
     Info,
 
