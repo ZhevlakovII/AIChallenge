@@ -48,6 +48,13 @@ data class SettingsState(
     // для ZScore
     val ragZScore: String = "-0.5",
 
+    // ===== RAG Indexing =====
+    val docsDirectory: String = "",
+    val isIndexing: Boolean = false,
+    val indexingProgress: String? = null,
+    val indexingSuccess: String? = null,
+    val indexingError: String? = null,
+
     // Состояние UI
     val isLoading: Boolean = true,
     val isSaved: Boolean = false,

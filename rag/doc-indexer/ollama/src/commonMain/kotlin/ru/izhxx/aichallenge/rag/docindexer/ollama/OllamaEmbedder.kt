@@ -59,6 +59,7 @@ class OllamaEmbedder(
         var lastError: Throwable? = null
 
         suspend fun request(body: EmbeddingRequest): EmbeddingResponse {
+            println("         [Ollama] POST $baseUrl/api/embeddings (text=${text.take(30).replace("\n", " ")}...)")
             return http.post("$baseUrl/api/embeddings") {
                 contentType(ContentType.Application.Json)
                 setBody(body)
@@ -78,21 +79,33 @@ class OllamaEmbedder(
         while (attempt <= retries) {
             try {
                 // 1) prompt
-                extract(request(EmbeddingRequest(model = model, prompt = text)))?.let { return it }
+                extract(request(EmbeddingRequest(model = model, prompt = text)))?.let {
+                    println("         [Ollama] ✓ Received embedding")
+                    return it
+                }
                 // 2) input (string)
-                extract(request(EmbeddingRequest(model = model, input = text)))?.let { return it }
+                extract(request(EmbeddingRequest(model = model, input = text)))?.let {
+                    println("         [Ollama] ✓ Received embedding")
+                    return it
+                }
                 // 3) inputs (array)
-                extract(request(EmbeddingRequest(model = model, inputs = listOf(text))))?.let { return it }
+                extract(request(EmbeddingRequest(model = model, inputs = listOf(text))))?.let {
+                    println("         [Ollama] ✓ Received embedding")
+                    return it
+                }
 
                 error("Ollama embeddings response doesn't contain embedding(s) or returned empty vector")
             } catch (t: Throwable) {
                 lastError = t
+                println("         [Ollama] ⚠️  Attempt ${attempt + 1}/${retries + 1} failed: ${t.message}")
                 if (attempt == retries) break
+                println("         [Ollama] 🔄 Retrying in ${backoff}ms...")
                 delay(backoff)
                 backoff = (backoff * 2).coerceAtMost(4000)
                 attempt++
             }
         }
+        println("         [Ollama] ❌ All attempts failed")
         throw lastError ?: IllegalStateException("Unknown error in OllamaEmbedder")
     }
 }

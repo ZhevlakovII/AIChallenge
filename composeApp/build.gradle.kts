@@ -43,6 +43,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(projects.shared.sharedold)
             implementation(projects.rag.docIndexer.core)
+            implementation(projects.rag.docIndexer.ollama)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -50,6 +51,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.koin.core)
+            implementation(projects.rag.docIndexer.fsJvm)
+            implementation(libs.ktor.clientCore)
         }
     }
 }
@@ -73,7 +76,7 @@ android {
     buildTypes {
         getByName("release") {
             // Отключаем R8 minify для стабильной сборки (проблемы с вырезанием RAG классов)
-            isMinifyEnabled = true
+            isMinifyEnabled = false
         }
     }
     compileOptions {
@@ -89,6 +92,12 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "ru.izhxx.aichallenge.MainKt"
+
+        // Увеличиваем heap size для Desktop приложения (для RAG индексации)
+        jvmArgs += listOf(
+            "-Xmx8G",  // Максимальный размер heap 8GB
+            "-Xms1G"    // Начальный размер heap 1GB
+        )
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

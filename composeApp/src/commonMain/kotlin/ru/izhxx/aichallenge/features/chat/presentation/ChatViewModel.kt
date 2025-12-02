@@ -500,6 +500,86 @@ class ChatViewModel(
      */
     private suspend fun handleMcpCommand(text: String): Boolean {
         val trimmed = text.trim()
+
+        // Команда /help - интеллектуальная справка
+        if (trimmed.startsWith("/help")) {
+            val query = trimmed.removePrefix("/help").trim()
+
+            if (query.isBlank()) {
+                // Без параметров - показать справку по командам
+                val helpText = buildString {
+                    appendLine("### Доступные команды чата:")
+                    appendLine()
+                    appendLine("**`/help [вопрос]`** - Интеллектуальная справка по проекту")
+                    appendLine("  - Без параметров: показать эту справку")
+                    appendLine("  - С вопросом: искать ответ в документации проекта (RAG)")
+                    appendLine("  - Автоматически использует Git-инструменты для вопросов о репозитории")
+                    appendLine()
+                    appendLine("**`/compare [вопрос]`** - Сравнить ответы с/без RAG")
+                    appendLine("  - Показывает метрики использования контекста")
+                    appendLine()
+                    appendLine("**`/repos <username>`** - GitHub репозитории пользователя")
+                    appendLine()
+                    appendLine("**`/myrepos`** - Мои GitHub репозитории (требуется GITHUB_TOKEN)")
+                    appendLine()
+                    appendLine("**`/tools`** - Список доступных MCP инструментов")
+                    appendLine()
+                    appendLine("### Настройка:")
+                    appendLine("- Включите RAG в Settings для работы интеллектуальной справки")
+                    appendLine("- Настройте MCP сервер в разделе MCP")
+                    appendLine("- Включите MCP Tool Calling в Settings для автоматического использования Git-инструментов")
+                }
+
+                val msg = responseMapper.createTechnicalUiMessage(helpText)
+                addUiMessage(msg)
+                return true
+            } else {
+                // С вопросом - использовать RAG + LLM для ответа
+                _state.update { it.copy(isLoading = true, error = null) }
+
+                try {
+                    // Отправляем вопрос через обычный пайплайн (с RAG и MCP если включены)
+                    val augmentedQuery = "Вопрос о проекте: $query\n\nИспользуй документацию проекта для ответа. Если нужна информация о Git репозитории (ветка, коммиты), используй доступные Git-инструменты."
+
+                    sendMessageUseCase.invoke(augmentedQuery, messageHistory.value, currentSummary).fold(
+                        onSuccess = { response ->
+                            val assistantUiMessage = responseMapper.mapLLMResponseToUiMessage(
+                                choice = response.choices.first(),
+                                responseFormat = response.format,
+                                usage = response.usage
+                            )
+                            addUiMessage(assistantUiMessage)
+
+                            // Сохраняем ответ ассистента в историю
+                            messageHistory.update {
+                                it.apply {
+                                    add(response.choices.first().rawMessage)
+                                }
+                            }
+
+                            _state.update { it.copy(isLoading = false) }
+                        },
+                        onFailure = { error ->
+                            val errorText = if (error is DomainException) {
+                                error.message ?: "Неизвестная ошибка"
+                            } else {
+                                "Ошибка: ${error.message}"
+                            }
+                            val errorMsg = responseMapper.createTechnicalUiMessage("❌ $errorText")
+                            addUiMessage(errorMsg)
+                            _state.update { it.copy(isLoading = false, error = error as? DomainException) }
+                        }
+                    )
+                } catch (e: Exception) {
+                    val errorMsg = responseMapper.createTechnicalUiMessage("❌ Неожиданная ошибка: ${e.message}")
+                    addUiMessage(errorMsg)
+                    _state.update { it.copy(isLoading = false) }
+                }
+
+                return true
+            }
+        }
+
         // Команда сравнения ответов (не требует MCP)
         if (trimmed.startsWith("/compare")) {
             _state.update { it.copy(isLoading = true, error = null) }

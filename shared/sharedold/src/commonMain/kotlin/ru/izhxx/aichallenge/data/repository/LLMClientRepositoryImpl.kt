@@ -146,6 +146,15 @@ class LLMClientRepositoryImpl(
             // Подготавливаем LLM tools (объединение из нескольких MCP, если задано)
             val llmTools: List<LlmToolSchemaDTO>? = buildLlmToolsIfEnabled(llmConfig)
 
+            if (llmTools != null) {
+                logger.i("🔧 LLM Tools enabled: ${llmTools.size} tools available")
+                llmTools.forEach { tool ->
+                    logger.i("   • ${tool.function.name}: ${tool.function.description}")
+                }
+            } else {
+                logger.i("⚠️  LLM Tools disabled or unavailable")
+            }
+
             // Выполняем первый запрос (с tools, если есть)
             var request = LLMChatRequestDTO(
                 model = providerSettings.model,
@@ -239,10 +248,16 @@ class LLMClientRepositoryImpl(
      * Возвращает null, если инструменты недоступны или выключены.
      */
     private suspend fun buildLlmToolsIfEnabled(config: LLMConfig): List<LlmToolSchemaDTO>? {
-        if (!config.enableMcpToolCalling) return null
+        if (!config.enableMcpToolCalling) {
+            logger.d("MCP Tool Calling disabled in config")
+            return null
+        }
+
+        logger.d("🔍 Building LLM tools from MCP servers...")
 
         // 1) Попробуем использовать многосерверную конфигурацию
         val servers = runCatching { getMcpServers() }.getOrDefault(emptyList())
+        logger.d("   Found ${servers.size} MCP servers in config")
         if (servers.isNotEmpty()) {
             // Сбор реестра (toolName -> wsUrl)
             runCatching { mcpRouter.rebuildRegistry(servers) }
@@ -464,6 +479,15 @@ class LLMClientRepositoryImpl(
 
             // Подготавливаем LLM tools (объединение из нескольких MCP, если задано)
             val llmTools: List<LlmToolSchemaDTO>? = buildLlmToolsIfEnabled(llmConfig)
+
+            if (llmTools != null) {
+                logger.i("🔧 LLM Tools enabled: ${llmTools.size} tools available")
+                llmTools.forEach { tool ->
+                    logger.i("   • ${tool.function.name}: ${tool.function.description}")
+                }
+            } else {
+                logger.i("⚠️  LLM Tools disabled or unavailable")
+            }
 
             // Выполняем первый запрос (с tools, если есть)
             var request = LLMChatRequestDTO(

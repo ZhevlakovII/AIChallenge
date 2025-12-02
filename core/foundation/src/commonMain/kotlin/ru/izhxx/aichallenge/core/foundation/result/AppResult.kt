@@ -76,6 +76,7 @@ sealed class AppResult<out T> {
          * @return [AppResult.Success] с переданным значением.
          */
         fun <T> success(value: T): AppResult<T> = Success(value)
+
         /**
          * Фабрика неуспешного результата.
          *

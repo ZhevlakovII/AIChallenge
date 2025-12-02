@@ -20,26 +20,50 @@ class CharOverlapChunker(
     override fun split(text: String, maxChars: Int, overlapChars: Int): List<IntRange> {
         if (text.isBlank()) return emptyList()
         require(maxChars > 0) { "maxChars must be > 0" }
-        require(overlapChars >= 0 && overlapChars < maxChars) { "overlapChars must be >= 0 and < maxChars" }
+        require(overlapChars in 0..<maxChars) { "overlapChars must be >= 0 and < maxChars" }
 
         val ranges = mutableListOf<IntRange>()
         var start = 0
         val n = text.length
+        println("      [Chunker] Text length: $n chars, maxChars: $maxChars, overlap: $overlapChars")
+
+        var iterations = 0
+        val maxIterations = n + 100 // защита от бесконечного цикла
 
         while (start < n) {
+            iterations++
+            if (iterations > maxIterations) {
+                println("      [Chunker] ❌ ERROR: Too many iterations ($iterations), breaking to prevent infinite loop")
+                println("      [Chunker]   Current state: start=$start, n=$n, ranges=${ranges.size}")
+                break
+            }
+
             val targetEnd = min(start + maxChars, n)
             val endExclusive = chooseBoundary(text, start, targetEnd, n)
             val endExclusiveFixed = max(start + 1, endExclusive) // гарантируем прогресс хотя бы на 1 символ
 
             // IntRange — включительно, поэтому сохраняем [start, endExclusive-1]
-            ranges.add(start..(endExclusiveFixed - 1))
+            ranges.add(start..<endExclusiveFixed)
 
             if (endExclusiveFixed >= n) break
+
             // следующий старт с overlap
-            start = max(0, endExclusiveFixed - overlapChars)
+            val nextStart = max(0, endExclusiveFixed - overlapChars)
+
+            // CRITICAL: гарантируем прогресс - новый start должен быть строго больше старого
+            // Иначе получим бесконечный цикл, если overlapChars >= (endExclusiveFixed - start)
+            if (nextStart <= start) {
+                // Если overlap слишком большой, двигаемся хотя бы на 1 символ вперёд
+                println("      [Chunker] ⚠️  Overlap too large, forcing progress: start $start → ${start + 1}")
+                start = start + 1
+            } else {
+                start = nextStart
+            }
+
             if (start >= n) break
         }
 
+        println("      [Chunker] Split complete: ${ranges.size} chunks in $iterations iterations")
         return ranges
     }
 

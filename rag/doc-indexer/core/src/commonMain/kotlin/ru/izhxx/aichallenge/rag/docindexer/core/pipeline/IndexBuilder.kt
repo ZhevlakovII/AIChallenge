@@ -1,5 +1,6 @@
 package ru.izhxx.aichallenge.rag.docindexer.core.pipeline
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -44,52 +45,87 @@ class IndexBuilder(
         var totalChunks = 0
         var totalChunkLen = 0
 
-        // Сканируем только .md
+        // Scan for .md files only
         val files = reader.scanMarkdownFiles(inputDir)
+        println("📁 Found files: ${files.size}")
 
         coroutineScope {
-            for (entry in files) {
-                val content = normalize(reader.read(entry))
-                val ranges = chunker.split(content, params.maxChars, params.overlapChars)
+            files.forEachIndexed { fileIndex, entry ->
+                println("📄 [${fileIndex + 1}/${files.size}] Processing: ${entry.relativePath}")
 
-                // Эмбеддинги для чанков файла — параллелим, но лимитируем
-                val embeddings = ranges.map { range ->
-                    val text = safeSubstring(content, range)
-                    async {
-                        semaphore.withPermit {
-                            embedder.embed(text)
-                        }
+                // Process file in separate block to release intermediate data
+                val doc = run {
+                    val content = normalize(reader.read(entry))
+                    val contentLength = content.length
+                    println("   📏 Size: ${contentLength / 1024} KB")
+
+                    val ranges = chunker.split(content, params.maxChars, params.overlapChars)
+                    println("   ✂️  Created chunks: ${ranges.size}")
+
+                    // Generate embeddings for chunks - parallel but rate-limited
+                    println("   🔄 Generating embeddings (concurrency=${params.concurrency})...")
+                    val embeddings = try {
+                        ranges.mapIndexed { idx, range ->
+                            val text = safeSubstring(content, range)
+                            async(Dispatchers.Default) {
+                                semaphore.withPermit {
+                                    println("      → Chunk ${idx + 1}/${ranges.size}: ${text.take(50).replace("\n", " ")}...")
+                                    val embedding = embedder.embed(text)
+                                    println("      ✓ Chunk ${idx + 1}/${ranges.size} embedded (dim=${embedding.size})")
+                                    embedding
+                                }
+                            }
+                        }.awaitAll()
+                    } catch (e: Exception) {
+                        println("      ❌ ERROR generating embeddings: ${e.message}")
+                        throw e
                     }
-                }.awaitAll()
+                    println("   ✅ All embeddings generated")
 
-                val chunks = ranges.mapIndexed { idx, range ->
-                    val text = safeSubstring(content, range)
-                    totalChunks += 1
-                    totalChunkLen += text.length
-                    Chunk(
-                        id = "${entry.relativePath}::$idx",
-                        index = idx,
-                        start = range.first,
-                        end = range.last + 1, // делаем end эксклюзивным в модели
-                        text = text,
-                        embedding = embeddings[idx]
+                    val chunks = ranges.mapIndexed { idx, range ->
+                        val text = safeSubstring(content, range)
+                        totalChunks += 1
+                        totalChunkLen += text.length
+                        Chunk(
+                            id = "${entry.relativePath}::$idx",
+                            index = idx,
+                            start = range.first,
+                            end = range.last + 1, // make end exclusive in model
+                            text = text,
+                            embedding = embeddings[idx]
+                        )
+                    }
+
+                    Document(
+                        id = entry.relativePath,
+                        path = entry.relativePath,
+                        title = deriveTitle(content),
+                        sha256 = hasher.sha256(content),
+                        chunks = chunks
                     )
                 }
 
-                val doc = Document(
-                    id = entry.relativePath,
-                    path = entry.relativePath,
-                    title = deriveTitle(content),
-                    sha256 = hasher.sha256(content),
-                    chunks = chunks
-                )
                 docs.add(doc)
+
+                // Hint for GC - free memory after processing large files
+                if ((fileIndex + 1) % 10 == 0) {
+                    println("   🧹 Memory cleanup...")
+                }
             }
         }
 
         val avgLen = if (totalChunks > 0) totalChunkLen.toDouble() / totalChunks else 0.0
 
         val elapsedMs = (Clock.System.now().nanosecondsOfSecond - startNs) / 1_000_000
+
+        println("\n" + "=".repeat(50))
+        println("✨ Indexing completed!")
+        println("📊 Statistics:")
+        println("   • Documents: ${docs.size}")
+        println("   • Chunks: $totalChunks")
+        println("   • Avg chunk length: ${avgLen.toInt()} chars")
+        println("   • Time: ${elapsedMs / 1000.0}s")
+        println("=".repeat(50))
 
         return DocumentIndex(
             version = "1",

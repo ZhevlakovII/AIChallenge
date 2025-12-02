@@ -10,56 +10,22 @@ This is a **Kotlin Multiplatform** project implementing an AI Challenge applicat
 
 ### Build the Application
 ```bash
-# Windows
-.\gradlew.bat build
-
-# macOS/Linux
 ./gradlew build
 ```
 
 ### Run Android Application
 ```bash
-# Windows
-.\gradlew.bat :composeApp:assembleDebug
-
-# macOS/Linux
 ./gradlew :composeApp:assembleDebug
 ```
 
 ### Run Desktop (JVM) Application
 ```bash
-# Windows
-.\gradlew.bat :composeApp:run
-
-# macOS/Linux
 ./gradlew :composeApp:run
 ```
 
 ### Run Server
 ```bash
-# Windows
-.\gradlew.bat :server:run
-
-# macOS/Linux
 ./gradlew :server:run
-```
-
-### Code Quality & Analysis
-```bash
-# Run Detekt static analysis
-./gradlew detekt
-
-# Generate dependency graphs (requires jdeps from JDK)
-./gradlew generateDependencyGraph
-
-# Generate package-level dependency graphs
-./gradlew generatePackageDependencyGraph
-
-# Decorate graphs with layer colors and validation
-./gradlew decorateDependencyGraph
-
-# Generate graph for specific feature (e.g., chat)
-./gradlew generateFeatureGraph -Pfeature=chat
 ```
 
 ## Architecture Overview
@@ -81,19 +47,7 @@ The project uses automatic module discovery from these root directories:
 ### Core Modules
 
 #### `core/network/`
-Multiplatform network layer with API/Impl separation:
-- `core/network/core/` - Base HTTP client infrastructure
-- `core/network/clients/rest/` - REST client implementation
-- `core/network/clients/sse/` - Server-Sent Events client
-- `core/network/clients/websocket/` - WebSocket client
-- `core/network/clients/connectivity/` - Network connectivity monitoring
-- `core/network/plugins/auth/` - Authentication plugin
-- `core/network/plugins/cache/` - Response caching plugin
-- `core/network/plugins/metrics/` - Network metrics collection plugin
-
-All network modules follow the pattern:
-- `api/` - Public interfaces and contracts
-- `impl/` - Platform-specific implementations
+A lightweight module for creating Ktor HttpClient. It is split into `api` and `impl` modules. Consumers use the `api` module.
 
 #### `core/ui/`
 - `core/ui/mvi/` - MVI (Model-View-Intent) framework
@@ -195,11 +149,13 @@ All features and modules use Koin for DI. Modules are organized by feature:
 - `SharedModule` - Core shared dependencies (legacy)
 - `<Feature>Module` - Feature-specific dependencies
 - `<Instrument>Module` - Instrument-specific dependencies
-- `<Core>Module` - Core-specific dependencies (such as `restClientModule`)
+- `<Name>Module` - Module-specific dependencies (such as `networkModule`)
 
 Platform-specific DI files:
 - `PlatformModule.android.kt`
 - `PlatformModule.jvm.kt`
+
+Modules are created as variables (`val`). To obtain the required dependencies, use `get()` inside the constructor or function.
 
 ### Database (Room)
 
@@ -272,10 +228,7 @@ All UI state is managed through MVI:
 
 ### Error Handling
 
-- Domain layer uses `DomainException` hierarchy
-- API errors mapped through `ErrorMapper`
-- Safe API calls wrapped with error handling utilities
-- Errors propagated through MVI Result/State chain
+WIP
 
 ### Platform-Specific Code
 

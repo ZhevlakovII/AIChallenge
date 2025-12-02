@@ -3,7 +3,6 @@ package ru.izhxx.aichallenge.core.foundation.logger
 import ru.izhxx.aichallenge.core.foundation.logger.Tag.Companion.MAX_LENGTH
 import kotlin.jvm.JvmInline
 
-
 /**
  * Короткий тег логирования, общий для всех платформ.
  *
@@ -21,6 +20,7 @@ value class Tag private constructor(val value: String) {
      * Фабричные методы создания [Tag] и связанные константы.
      */
     companion object {
+
         /**
          * Максимально допустимая длина тега для всех платформ.
          * Используйте в IDE/подсказках: [Tag.MAX_LENGTH].
@@ -33,13 +33,13 @@ value class Tag private constructor(val value: String) {
          * тем самым явно подсвечивая ограничение на этапе разработки.
          */
         fun of(raw: String): Tag {
-            val v = raw.trim()
-            require(v.isNotEmpty()) { "Tag must not be blank" }
-            require(v.length <= MAX_LENGTH) {
-                "Tag length (${v.length}) exceeds MAX_LENGTH=$MAX_LENGTH. " +
-                        "Use Tag.ofTruncated(...) if truncation is acceptable."
+            val value = raw.trim()
+            require(value.isNotEmpty()) { "Tag must not be blank" }
+            require(value.length <= MAX_LENGTH) {
+                "Tag length (${value.length}) exceeds MAX_LENGTH=$MAX_LENGTH. " +
+                    "Use Tag.ofTruncated(...) if truncation is acceptable."
             }
-            return Tag(v)
+            return Tag(value)
         }
 
         /**
@@ -50,12 +50,16 @@ value class Tag private constructor(val value: String) {
             raw: String,
             onTruncate: ((original: String, truncated: String) -> Unit)? = null
         ): Tag {
-            val v = raw.trim()
-            require(v.isNotEmpty()) { "Tag must not be blank" }
-            val t = if (v.length <= MAX_LENGTH) v else v.take(MAX_LENGTH).also {
-                onTruncate?.invoke(v, it)
+            val value = raw.trim()
+            require(value.isNotEmpty()) { "Tag must not be blank" }
+            val truncatedValue = if (value.length <= MAX_LENGTH) {
+                value
+            } else {
+                value.take(MAX_LENGTH).also {
+                    onTruncate?.invoke(value, it)
+                }
             }
-            return Tag(t)
+            return Tag(truncatedValue)
         }
     }
 }

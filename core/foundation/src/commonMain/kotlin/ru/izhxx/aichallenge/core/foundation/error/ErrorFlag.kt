@@ -11,5 +11,5 @@ enum class ErrorFlag {
     Permanent,
 
     /** Ошибка, для которой допустима стратегия повторных попыток. */
-    Retriable,
+    Retriable
 }
