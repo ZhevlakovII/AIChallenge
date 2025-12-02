@@ -30,7 +30,7 @@ class PrMcpDataSourceImpl(
         val args = buildJsonObject {
             put("owner", owner)
             put("repo", repo)
-            put("pull_number", prNumber)
+            put("pr_number", prNumber)
         }
 
         // Call MCP tool
@@ -49,7 +49,7 @@ class PrMcpDataSourceImpl(
         val args = buildJsonObject {
             put("owner", owner)
             put("repo", repo)
-            put("pull_number", prNumber)
+            put("pr_number", prNumber)
         }
 
         // Call MCP tool
@@ -69,7 +69,7 @@ class PrMcpDataSourceImpl(
         val args = buildJsonObject {
             put("owner", owner)
             put("repo", repo)
-            put("pull_number", prNumber)
+            put("pr_number", prNumber)
         }
 
         // Call MCP tool
@@ -89,7 +89,7 @@ class PrMcpDataSourceImpl(
         val args = buildJsonObject {
             put("owner", owner)
             put("repo", repo)
-            put("pull_number", prNumber)
+            put("pr_number", prNumber)
             put("path", filePath)
         }
 

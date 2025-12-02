@@ -12,7 +12,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
-import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -50,7 +49,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
@@ -619,7 +617,7 @@ private fun readGithubTokenFromSecrets(): String {
         if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
             val content = Files.readAllBytes(candidate)
             val token = String(content, StandardCharsets.UTF_8).trim()
-            if (token.isNotEmpty()) token else ""
+            token
         } else {
             ""
         }
