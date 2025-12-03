@@ -2,11 +2,11 @@ package ru.izhxx.aichallenge.data.rag
 
 import ru.izhxx.aichallenge.domain.rag.CutoffMode
 import ru.izhxx.aichallenge.domain.rag.RagEmbedder
+import ru.izhxx.aichallenge.domain.rag.RagReranker
 import ru.izhxx.aichallenge.domain.rag.RagRetriever
+import ru.izhxx.aichallenge.domain.rag.RagSettings
 import ru.izhxx.aichallenge.domain.rag.RerankMode
 import ru.izhxx.aichallenge.domain.rag.RerankSettings
-import ru.izhxx.aichallenge.domain.rag.RagReranker
-import ru.izhxx.aichallenge.domain.rag.RagSettings
 import ru.izhxx.aichallenge.domain.rag.RetrievedChunk
 import ru.izhxx.aichallenge.rag.docindexer.core.model.DocumentIndex
 import kotlin.math.max
@@ -58,16 +58,13 @@ class RagSearchPipeline(
             RerankMode.None -> candidates
             RerankMode.MMR, RerankMode.LLM -> {
                 val rr = rerankerFactory(settings.rerank.mode)
-                if (rr != null) {
-                    rr.rerank(
-                        questionEmbedding = qEmb,
-                        candidates = candidates,
-                        index = index,
-                        settings = settings.rerank
-                    )
-                } else {
-                    candidates // фоллбэк, если реранкер не предоставлен
-                }
+                rr?.rerank(
+                    questionEmbedding = qEmb,
+                    candidates = candidates,
+                    index = index,
+                    settings = settings.rerank
+                )
+                    ?: candidates // фоллбэк, если реранкер не предоставлен
             }
         }
 

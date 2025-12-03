@@ -27,6 +27,8 @@ kotlin {
             implementation(libs.koin.androidx.compose)
         }
         commonMain.dependencies {
+            implementation(projects.features.productassistant.api)
+            implementation(projects.features.productassistant.impl)
             implementation(projects.features.pranalyzer.api)
             implementation(projects.features.pranalyzer.impl)
             implementation(projects.core.ui.navigation)
