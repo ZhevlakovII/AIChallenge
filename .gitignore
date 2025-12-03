@@ -19,3 +19,5 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 /docs/architecture
+config/secrets/
+config/secrets

@@ -16,3 +16,5 @@ rag-embeddings-data
 rag-embeddings-data/
 unused
 unused/
+config/secrets/
+config/secrets

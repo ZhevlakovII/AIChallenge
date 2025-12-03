@@ -6,23 +6,23 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import ru.izhxx.aichallenge.data.repository.McpConfigRepositoryImpl
+import ru.izhxx.aichallenge.data.repository.McpServersRepositoryImpl
 import ru.izhxx.aichallenge.domain.repository.McpConfigRepository
+import ru.izhxx.aichallenge.domain.repository.McpServersRepository
 import ru.izhxx.aichallenge.mcp.data.McpRepositoryImpl
-import ru.izhxx.aichallenge.mcp.data.transport.McpWebSocketClient
 import ru.izhxx.aichallenge.mcp.data.McpToLlmToolsMapper
+import ru.izhxx.aichallenge.mcp.data.transport.McpWebSocketClient
 import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
 import ru.izhxx.aichallenge.mcp.domain.usecase.EnsureMcpConnectedUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetGithubUserReposUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpServersUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpToolsUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMyGithubReposUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetSavedMcpUrlUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.SaveMcpServersUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.SaveMcpUrlUseCase
-import ru.izhxx.aichallenge.domain.repository.McpServersRepository
-import ru.izhxx.aichallenge.data.repository.McpServersRepositoryImpl
 import ru.izhxx.aichallenge.mcp.orchestrator.McpRouter
 import ru.izhxx.aichallenge.mcp.orchestrator.PolicyBasedMcpRouter
-import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpServersUseCase
-import ru.izhxx.aichallenge.mcp.domain.usecase.SaveMcpServersUseCase
 
 /**
  * Shared Koin-модуль для MCP: транспорт, репозиторий, use case.

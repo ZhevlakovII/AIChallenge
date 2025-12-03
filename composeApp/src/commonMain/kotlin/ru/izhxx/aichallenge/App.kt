@@ -20,11 +20,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import ru.izhxx.aichallenge.features.metrics.ChatMetricsScreen
 import ru.izhxx.aichallenge.features.chat.presentation.ChatScreen
-import ru.izhxx.aichallenge.features.settings.SettingsScreen
 import ru.izhxx.aichallenge.features.mcp.presentation.McpScreen
+import ru.izhxx.aichallenge.features.metrics.ChatMetricsScreen
+import ru.izhxx.aichallenge.features.pranalyzer.api.PrAnalyzerDestinationRoute
+import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.PrAnalyzerScreen
 import ru.izhxx.aichallenge.features.reminder.presentation.ReminderScreen
+import ru.izhxx.aichallenge.features.settings.SettingsScreen
+import kotlin.time.ExperimentalTime
 
 /**
  * Главные экраны приложения
@@ -67,6 +70,11 @@ val bottomNavItems = listOf(
         route = Screen.Reminder.route,
         title = "Напоминания",
         icon = "⏰"
+    ),
+    BottomNavItem(
+        route = PrAnalyzerDestinationRoute.invoke(),
+        title = "PR",
+        icon = "🔍"
     ),
     BottomNavItem(
         route = Screen.Settings.route,
@@ -118,6 +126,7 @@ private fun BottomNavigation(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
 fun App() {
     MaterialTheme {
@@ -157,6 +166,11 @@ fun App() {
                     // Экран напоминаний
                     composable(Screen.Reminder.route) {
                         ReminderScreen()
+                    }
+
+                    // Экран анализа PR
+                    composable(PrAnalyzerDestinationRoute.invoke()) {
+                        PrAnalyzerScreen()
                     }
 
                     // Экран настроек
