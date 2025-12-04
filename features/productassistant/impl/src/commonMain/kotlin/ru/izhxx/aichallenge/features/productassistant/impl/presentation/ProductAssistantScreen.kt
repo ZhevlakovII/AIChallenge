@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -172,36 +173,37 @@ fun ProductAssistantScreen(
             ) {
                 // Ticket creation form (shown inline when needed)
                 if (state.showCreateTicketForm) {
-                    TicketCreationForm(
-                        title = state.ticketTitle,
-                        description = state.ticketDescription,
-                        tags = state.ticketTags,
-                        isLoading = state.isLoading,
-                        enabled = state.isInputEnabled,
-                        onTitleChanged = { title ->
-                            viewModel.accept(ProductAssistantIntent.TicketTitleChanged(title))
-                        },
-                        onDescriptionChanged = { description ->
-                            viewModel.accept(ProductAssistantIntent.TicketDescriptionChanged(description))
-                        },
-                        onTagsChanged = { tags ->
-                            viewModel.accept(ProductAssistantIntent.TicketTagsChanged(tags))
-                        },
-                        onSubmit = {
-                            val tagList = state.ticketTags.split(",")
-                                .map { it.trim() }
-                                .filter { it.isNotBlank() }
-                            viewModel.accept(ProductAssistantIntent.CreateTicket(
-                                title = state.ticketTitle,
-                                description = state.ticketDescription,
-                                tags = tagList
-                            ))
-                        },
-                        onCancel = {
-                            viewModel.accept(ProductAssistantIntent.HideCreateTicketForm)
-                        },
-                        focusOnTitle = focusOnTitle
-                    )
+                TicketCreationForm(
+                    title = state.ticketTitle,
+                    description = state.ticketDescription,
+                    tags = state.ticketTags,
+                    isLoading = state.isLoading,
+                    enabled = state.isInputEnabled,
+                    onTitleChanged = { title ->
+                        viewModel.accept(ProductAssistantIntent.TicketTitleChanged(title))
+                    },
+                    onDescriptionChanged = { description ->
+                        viewModel.accept(ProductAssistantIntent.TicketDescriptionChanged(description))
+                    },
+                    onTagsChanged = { tags ->
+                        viewModel.accept(ProductAssistantIntent.TicketTagsChanged(tags))
+                    },
+                    onSubmit = {
+                        val tagList = state.ticketTags.split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                        viewModel.accept(ProductAssistantIntent.CreateTicket(
+                            title = state.ticketTitle,
+                            description = state.ticketDescription,
+                            tags = tagList
+                        ))
+                    },
+                    onCancel = {
+                        viewModel.accept(ProductAssistantIntent.HideCreateTicketForm)
+                    },
+                    focusOnTitle = focusOnTitle,
+                    modifier = Modifier.widthIn(max = 600.dp)
+                )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
