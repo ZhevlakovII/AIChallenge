@@ -20,10 +20,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -32,11 +36,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +52,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.AssistantMode
+import ru.izhxx.aichallenge.features.productassistant.impl.presentation.components.AddCommentDialog
+import ru.izhxx.aichallenge.features.productassistant.impl.presentation.components.TicketCardWithActions
+import ru.izhxx.aichallenge.features.productassistant.impl.presentation.components.TicketCreationForm
+import ru.izhxx.aichallenge.features.productassistant.impl.presentation.components.UpdateTicketDialog
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.AssistantResponseUi
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.FaqItemUi
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.ProductAssistantEffect
@@ -61,6 +72,13 @@ fun ProductAssistantScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    
+    // Dialog states
+    var showCommentDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var selectedTicketId by remember { mutableStateOf("") }
+    var focusOnTitle by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -74,80 +92,222 @@ fun ProductAssistantScreen(
                 is ProductAssistantEffect.ScrollToResponse -> {
                     // Handle scrolling to response
                 }
+                ProductAssistantEffect.ClearTicketForm -> {
+                    // Clear form fields handled by state
+                }
+                ProductAssistantEffect.FocusOnTicketTitle -> {
+                    focusOnTitle = true
+                }
+                ProductAssistantEffect.HideTicketCreationForm -> {
+                    drawerState.close()
+                }
+                ProductAssistantEffect.ShowTicketCreationForm -> {
+                    drawerState.open()
+                }
             }
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Product Assistant") }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Mode selector
-            ModeSelector(
-                selectedMode = state.selectedMode,
-                enabled = state.isInputEnabled,
-                onModeSelected = { mode ->
-                    viewModel.accept(ProductAssistantIntent.ModeChanged(mode))
-                }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Query input
-            QueryInput(
-                query = state.query,
-                enabled = state.isInputEnabled,
-                onQueryChanged = { query ->
-                    viewModel.accept(ProductAssistantIntent.QueryChanged(query))
-                },
-                onAskClicked = {
-                    viewModel.accept(ProductAssistantIntent.AskQuestion)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Loading indicator
-            if (state.isLoading) {
-                LoadingIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Error message
-            state.error?.let { error ->
-                ErrorMessage(
-                    error = error,
-                    onRetryClicked = {
-                        viewModel.accept(ProductAssistantIntent.Retry)
-                    }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            // Response
-            state.response?.let { response ->
-                ResponseContent(
-                    response = response,
-                    onTicketClicked = { ticketId ->
-                        viewModel.accept(ProductAssistantIntent.ViewTicket(ticketId))
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                TicketCreationForm(
+                    title = state.ticketTitle,
+                    description = state.ticketDescription,
+                    tags = state.ticketTags,
+                    isLoading = state.isLoading,
+                    enabled = state.isInputEnabled,
+                    onTitleChanged = { title ->
+                        viewModel.accept(ProductAssistantIntent.TicketTitleChanged(title))
                     },
-                    onClearClicked = {
-                        viewModel.accept(ProductAssistantIntent.ClearResponse)
-                    }
+                    onDescriptionChanged = { description ->
+                        viewModel.accept(ProductAssistantIntent.TicketDescriptionChanged(description))
+                    },
+                    onTagsChanged = { tags ->
+                        viewModel.accept(ProductAssistantIntent.TicketTagsChanged(tags))
+                    },
+                    onSubmit = {
+                        val tagList = state.ticketTags.split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                        viewModel.accept(ProductAssistantIntent.CreateTicket(
+                            title = state.ticketTitle,
+                            description = state.ticketDescription,
+                            tags = tagList
+                        ))
+                    },
+                    onCancel = {
+                        viewModel.accept(ProductAssistantIntent.HideCreateTicketForm)
+                    },
+                    focusOnTitle = focusOnTitle,
+                    modifier = Modifier.padding(16.dp)
                 )
             }
         }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Product Assistant") }
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.accept(ProductAssistantIntent.ShowCreateTicketForm)
+                    }
+                ) {
+                    Text("+")
+                }
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Ticket creation form (shown inline when needed)
+                if (state.showCreateTicketForm) {
+                    TicketCreationForm(
+                        title = state.ticketTitle,
+                        description = state.ticketDescription,
+                        tags = state.ticketTags,
+                        isLoading = state.isLoading,
+                        enabled = state.isInputEnabled,
+                        onTitleChanged = { title ->
+                            viewModel.accept(ProductAssistantIntent.TicketTitleChanged(title))
+                        },
+                        onDescriptionChanged = { description ->
+                            viewModel.accept(ProductAssistantIntent.TicketDescriptionChanged(description))
+                        },
+                        onTagsChanged = { tags ->
+                            viewModel.accept(ProductAssistantIntent.TicketTagsChanged(tags))
+                        },
+                        onSubmit = {
+                            val tagList = state.ticketTags.split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotBlank() }
+                            viewModel.accept(ProductAssistantIntent.CreateTicket(
+                                title = state.ticketTitle,
+                                description = state.ticketDescription,
+                                tags = tagList
+                            ))
+                        },
+                        onCancel = {
+                            viewModel.accept(ProductAssistantIntent.HideCreateTicketForm)
+                        },
+                        focusOnTitle = focusOnTitle
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Mode selector
+                ModeSelector(
+                    selectedMode = state.selectedMode,
+                    enabled = state.isInputEnabled,
+                    onModeSelected = { mode ->
+                        viewModel.accept(ProductAssistantIntent.ModeChanged(mode))
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Query input
+                QueryInput(
+                    query = state.query,
+                    enabled = state.isInputEnabled,
+                    onQueryChanged = { query ->
+                        viewModel.accept(ProductAssistantIntent.QueryChanged(query))
+                    },
+                    onAskClicked = {
+                        viewModel.accept(ProductAssistantIntent.AskQuestion)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Loading indicator
+                if (state.isLoading) {
+                    LoadingIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Error message
+                state.error?.let { error ->
+                    ErrorMessage(
+                        error = error,
+                        onRetryClicked = {
+                            viewModel.accept(ProductAssistantIntent.Retry)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Response
+                state.response?.let { response ->
+                    ResponseContent(
+                        response = response,
+                        onTicketClicked = { ticketId ->
+                            viewModel.accept(ProductAssistantIntent.ViewTicket(ticketId))
+                        },
+                        onStatusUpdate = { ticketId, newStatus ->
+                            selectedTicketId = ticketId
+                            viewModel.accept(ProductAssistantIntent.UpdateTicket(
+                                ticketId = ticketId,
+                                newStatus = newStatus,
+                                comment = null
+                            ))
+                        },
+                        onAddComment = { ticketId ->
+                            selectedTicketId = ticketId
+                            showCommentDialog = true
+                        },
+                        onClearClicked = {
+                            viewModel.accept(ProductAssistantIntent.ClearResponse)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // Comment dialog
+    if (showCommentDialog) {
+        AddCommentDialog(
+            ticketId = selectedTicketId,
+            isLoading = state.isLoading,
+            onDismiss = { showCommentDialog = false },
+            onSubmitComment = { ticketId, comment ->
+                viewModel.accept(ProductAssistantIntent.UpdateTicket(
+                    ticketId = ticketId,
+                    newStatus = null,
+                    comment = comment
+                ))
+                showCommentDialog = false
+            }
+        )
+    }
+
+    // Update dialog (if needed for full ticket updates)
+    if (showUpdateDialog) {
+        UpdateTicketDialog(
+            ticketId = selectedTicketId,
+            currentStatus = "open", // This would come from ticket details
+            isLoading = state.isLoading,
+            onDismiss = { showUpdateDialog = false },
+            onUpdateTicket = { ticketId, newStatus, comment ->
+                viewModel.accept(ProductAssistantIntent.UpdateTicket(
+                    ticketId = ticketId,
+                    newStatus = newStatus,
+                    comment = comment
+                ))
+                showUpdateDialog = false
+            }
+        )
     }
 }
 
@@ -267,6 +427,8 @@ private fun ErrorMessage(
 private fun ResponseContent(
     response: AssistantResponseUi,
     onTicketClicked: (String) -> Unit,
+    onStatusUpdate: (String, String) -> Unit = { _, _ -> },
+    onAddComment: (String) -> Unit = { },
     onClearClicked: () -> Unit
 ) {
     Card(
@@ -318,7 +480,18 @@ private fun ResponseContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 response.relatedTickets.forEach { ticket ->
-                    TicketCard(ticket, onTicketClicked)
+                    TicketCardWithActions(
+                        ticketId = ticket.id,
+                        title = ticket.title,
+                        description = ticket.description,
+                        status = ticket.status,
+                        statusColor = ticket.statusColor,
+                        tags = ticket.tags,
+                        createdAt = ticket.createdAt,
+                        onTicketClicked = onTicketClicked,
+                        onStatusUpdate = onStatusUpdate,
+                        onAddComment = onAddComment
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }

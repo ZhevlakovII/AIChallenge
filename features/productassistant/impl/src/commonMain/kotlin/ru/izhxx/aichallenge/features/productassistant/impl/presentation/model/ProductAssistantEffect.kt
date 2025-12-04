@@ -20,4 +20,24 @@ sealed interface ProductAssistantEffect : MviEffect {
      * Scroll to response
      */
     data object ScrollToResponse : ProductAssistantEffect
+
+    /**
+     * Show ticket creation form
+     */
+    data object ShowTicketCreationForm : ProductAssistantEffect
+
+    /**
+     * Hide ticket creation form
+     */
+    data object HideTicketCreationForm : ProductAssistantEffect
+
+    /**
+     * Focus on ticket title field
+     */
+    data object FocusOnTicketTitle : ProductAssistantEffect
+
+    /**
+     * Clear ticket form
+     */
+    data object ClearTicketForm : ProductAssistantEffect
 }

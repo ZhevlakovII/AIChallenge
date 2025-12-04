@@ -25,4 +25,32 @@ interface TicketMcpDataSource {
      * @return Result containing JsonObject with ticket data
      */
     suspend fun getTicket(ticketId: String): Result<JsonObject>
+
+    /**
+     * Create a new support ticket via MCP
+     *
+     * @param title Ticket title
+     * @param description Ticket description
+     * @param tags Optional list of tags
+     * @return Result containing JsonObject with created ticket data
+     */
+    suspend fun createTicket(
+        title: String,
+        description: String,
+        tags: List<String> = emptyList()
+    ): Result<JsonObject>
+
+    /**
+     * Update an existing support ticket via MCP
+     *
+     * @param ticketId Ticket ID
+     * @param newStatus Optional new status
+     * @param comment Optional comment to add
+     * @return Result containing JsonObject with updated ticket data
+     */
+    suspend fun updateTicket(
+        ticketId: String,
+        newStatus: String? = null,
+        comment: String? = null
+    ): Result<JsonObject>
 }

@@ -12,7 +12,11 @@ data class ProductAssistantState(
     val isLoading: Boolean = false,
     val response: AssistantResponseUi? = null,
     val error: String? = null,
-    val isInputEnabled: Boolean = true
+    val isInputEnabled: Boolean = true,
+    val showCreateTicketForm: Boolean = false,
+    val ticketTitle: String = "",
+    val ticketDescription: String = "",
+    val ticketTags: String = ""
 ) : MviState
 
 /**
