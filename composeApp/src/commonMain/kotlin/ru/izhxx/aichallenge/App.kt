@@ -22,9 +22,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ru.izhxx.aichallenge.features.chat.presentation.ChatScreen
 import ru.izhxx.aichallenge.features.mcp.presentation.McpScreen
-import ru.izhxx.aichallenge.features.metrics.ChatMetricsScreen
 import ru.izhxx.aichallenge.features.pranalyzer.api.PrAnalyzerDestinationRoute
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.PrAnalyzerScreen
+import ru.izhxx.aichallenge.features.productassistant.api.ProductAssistantDestinationRoute
+import ru.izhxx.aichallenge.features.productassistant.impl.presentation.ProductAssistantScreen
 import ru.izhxx.aichallenge.features.reminder.presentation.ReminderScreen
 import ru.izhxx.aichallenge.features.settings.SettingsScreen
 import kotlin.time.ExperimentalTime
@@ -57,11 +58,6 @@ val bottomNavItems = listOf(
         icon = "💬"
     ),
     BottomNavItem(
-        route = Screen.Metrics.route,
-        title = "Метрики",
-        icon = "📊"
-    ),
-    BottomNavItem(
         route = Screen.Mcp.route,
         title = "MCP",
         icon = "🛠️"
@@ -75,6 +71,11 @@ val bottomNavItems = listOf(
         route = PrAnalyzerDestinationRoute.invoke(),
         title = "PR",
         icon = "🔍"
+    ),
+    BottomNavItem(
+        route = ProductAssistantDestinationRoute.invoke(),
+        title = "ProductAssitant",
+        icon = "📊"
     ),
     BottomNavItem(
         route = Screen.Settings.route,
@@ -153,11 +154,6 @@ fun App() {
                         )
                     }
 
-                    // Экран метрик
-                    composable(Screen.Metrics.route) {
-                        ChatMetricsScreen()
-                    }
-
                     // Экран MCP (список инструментов)
                     composable(Screen.Mcp.route) {
                         McpScreen()
@@ -171,6 +167,10 @@ fun App() {
                     // Экран анализа PR
                     composable(PrAnalyzerDestinationRoute.invoke()) {
                         PrAnalyzerScreen()
+                    }
+
+                    composable(ProductAssistantDestinationRoute.invoke()) {
+                        ProductAssistantScreen()
                     }
 
                     // Экран настроек
