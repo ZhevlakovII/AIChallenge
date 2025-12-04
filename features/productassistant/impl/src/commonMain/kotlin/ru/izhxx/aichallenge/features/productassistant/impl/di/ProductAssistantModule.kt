@@ -13,6 +13,8 @@ import ru.izhxx.aichallenge.features.productassistant.impl.data.datasource.Ticke
 import ru.izhxx.aichallenge.features.productassistant.impl.data.datasource.TicketMcpDataSourceImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.data.repository.ProductAssistantRepositoryImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.repository.ProductAssistantRepository
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.CreateTicketUseCase
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.CreateTicketUseCaseImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.GenerateAnswerUseCase
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.GenerateAnswerUseCaseImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.GetTicketUseCase
@@ -21,7 +23,10 @@ import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.ListTi
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.ListTicketsUseCaseImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.SearchFaqUseCase
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.SearchFaqUseCaseImpl
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.UpdateTicketUseCase
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.UpdateTicketUseCaseImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.ProductAssistantExecutor
+import ru.izhxx.aichallenge.features.productassistant.impl.presentation.ProductAssistantReducer
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.ProductAssistantViewModel
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.mapper.ProductAssistantUiMapper
 
@@ -45,13 +50,18 @@ val productAssistantModule = module {
     factoryOf(::GetTicketUseCaseImpl) bind GetTicketUseCase::class
     factoryOf(::ListTicketsUseCaseImpl) bind ListTicketsUseCase::class
     factoryOf(::GenerateAnswerUseCaseImpl) bind GenerateAnswerUseCase::class
+    factoryOf(::CreateTicketUseCaseImpl) bind CreateTicketUseCase::class
+    factoryOf(::UpdateTicketUseCaseImpl) bind UpdateTicketUseCase::class
 
     // Presentation Layer - Mapper
     singleOf(::ProductAssistantUiMapper)
+
+    // Presentation Layer - Reducer
+    singleOf(::ProductAssistantReducer)
 
     // Presentation Layer - Executor
     factoryOf(::ProductAssistantExecutor)
 
     // Presentation Layer - ViewModel
-    viewModel { ProductAssistantViewModel(get(), get()) }
+    viewModel { ProductAssistantViewModel(get()) }
 }

@@ -9,9 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviReducer
 import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviViewModel
-import ru.izhxx.aichallenge.features.productassistant.impl.presentation.mapper.ProductAssistantUiMapper
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.ProductAssistantEffect
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.ProductAssistantIntent
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.ProductAssistantResult
@@ -24,8 +22,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.Pr
  * Intent → Executor → Result/Effect → Reducer → State → UI
  */
 class ProductAssistantViewModel(
-    private val executor: ProductAssistantExecutor,
-    private val mapper: ProductAssistantUiMapper
+    private val executor: ProductAssistantExecutor
 ) : ViewModel(), MviViewModel<ProductAssistantIntent, ProductAssistantResult, ProductAssistantState, ProductAssistantEffect> {
 
     // Initial state
@@ -43,61 +40,8 @@ class ProductAssistantViewModel(
     // Public flow of effects for UI observation
     override val effects: Flow<ProductAssistantEffect> = _effects.receiveAsFlow()
 
-    // Pure reducer function for state transformation
-    private val reducer = MviReducer<ProductAssistantState, ProductAssistantResult> { currentState, result ->
-        when (result) {
-            is ProductAssistantResult.QueryUpdated -> {
-                currentState.copy(
-                    query = result.query,
-                    error = null
-                )
-            }
-
-            is ProductAssistantResult.ModeUpdated -> {
-                currentState.copy(
-                    selectedMode = result.mode,
-                    error = null
-                )
-            }
-
-            is ProductAssistantResult.LoadingStarted -> {
-                currentState.copy(
-                    isLoading = true,
-                    error = null,
-                    isInputEnabled = false
-                )
-            }
-
-            is ProductAssistantResult.AnswerReceived -> {
-                currentState.copy(
-                    isLoading = false,
-                    response = mapper.toUi(result.response),
-                    error = null,
-                    isInputEnabled = true
-                )
-            }
-
-            is ProductAssistantResult.ErrorOccurred -> {
-                currentState.copy(
-                    isLoading = false,
-                    error = result.message,
-                    isInputEnabled = true
-                )
-            }
-
-            is ProductAssistantResult.ResponseCleared -> {
-                currentState.copy(
-                    response = null,
-                    error = null
-                )
-            }
-
-            is ProductAssistantResult.ViewTicketRequested -> {
-                // No state change needed, handled via effect
-                currentState
-            }
-        }
-    }
+    // Reducer for state transformation
+    private val reducer = ProductAssistantReducer()
 
     /**
      * Accepts user intents and processes them through the MVI pipeline

@@ -14,6 +14,7 @@ data class SupportTicket(
     val description: String,
     val status: TicketStatus,
     val createdAt: Instant,
+    val updatedAt: Instant,
     val tags: List<String>
 )
 
