@@ -9,4 +9,9 @@ android {
     config("instruments.llm.config.mcp.model")
 }
 
-kotlin {}
+kotlin {
+    commonDependencies {
+        // Libraries
+        implementation(libs.kotlinx.serialization.json)
+    }
+}

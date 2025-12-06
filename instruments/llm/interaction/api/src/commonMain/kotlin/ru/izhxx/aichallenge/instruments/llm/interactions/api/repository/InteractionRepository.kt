@@ -4,7 +4,7 @@ import ru.izhxx.aichallenge.core.foundation.result.AppResult
 import ru.izhxx.aichallenge.instruments.llm.config.mcp.model.McpTool
 import ru.izhxx.aichallenge.instruments.llm.config.parameters.model.ParametersConfig
 import ru.izhxx.aichallenge.instruments.llm.config.provider.model.ProviderConfig
-import ru.izhxx.aichallenge.instruments.llm.interactions.api.model.Answer
+import ru.izhxx.aichallenge.instruments.llm.interactions.api.model.answer.Answer
 import ru.izhxx.aichallenge.instruments.llm.interactions.api.model.Message
 
 // TODO(заполнить документацию)

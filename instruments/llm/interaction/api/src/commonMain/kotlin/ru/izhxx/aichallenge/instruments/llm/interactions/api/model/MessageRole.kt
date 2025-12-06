@@ -6,5 +6,11 @@ package ru.izhxx.aichallenge.instruments.llm.interactions.api.model
 enum class MessageRole(val key: String) {
     System("system"),
     Assistant("assistant"),
-    User("user")
+    User("user");
+
+    companion object {
+        fun parseRole(roleString: String): MessageRole {
+            return entries.first { role -> roleString.lowercase() == role.key.lowercase() }
+        }
+    }
 }

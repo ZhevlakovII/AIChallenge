@@ -3,8 +3,7 @@ package ru.izhxx.aichallenge.instruments.llm.config.mcp.model
 import kotlinx.serialization.json.JsonObject
 
 // TODO(заполнить документацию)
-class McpFunction(
+class McpCallFunction(
     val name: String,
-    val description: String,
-    val parameters: JsonObject?,
+    val arguments: JsonObject?,
 )
