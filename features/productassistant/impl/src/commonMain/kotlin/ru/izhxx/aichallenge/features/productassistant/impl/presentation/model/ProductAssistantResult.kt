@@ -1,6 +1,5 @@
 package ru.izhxx.aichallenge.features.productassistant.impl.presentation.model
 
-import ru.izhxx.aichallenge.core.ui.mvi.model.MviResult
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.AssistantMode
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.AssistantResponse
 

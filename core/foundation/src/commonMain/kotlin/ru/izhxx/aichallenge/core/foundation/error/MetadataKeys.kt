@@ -3,6 +3,7 @@ package ru.izhxx.aichallenge.core.foundation.error
 /**
  * Резервированные ключи для метаданных.
  */
+@Deprecated("Миграция на создание через конструктор")
 object MetadataKeys {
     val CORRELATION_ID = MetadataKey("correlation_id")
     val REQUEST_ID = MetadataKey("request_id")

@@ -48,6 +48,6 @@ if (detektExcludedRoots.any { project.path == ":$it" || project.path.startsWith(
 
 dependencies {
     detektPlugins(libs.detekt.ruleset.compiler)
-    detektPlugins(libs.detekt.ruleset.ktlint)
+    detektPlugins(libs.detekt.formatting)
     detektPlugins(libs.detekt.ruleset.compose)
 }

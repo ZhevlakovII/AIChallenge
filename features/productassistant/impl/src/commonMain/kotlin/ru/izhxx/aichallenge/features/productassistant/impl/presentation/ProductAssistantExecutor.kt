@@ -1,6 +1,5 @@
 package ru.izhxx.aichallenge.features.productassistant.impl.presentation
 
-import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviExecutor
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.AssistantMode
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.TicketStatus
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.CreateTicketUseCase

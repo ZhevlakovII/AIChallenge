@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviReducer
 import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviViewModel
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.AnalysisStage
 import ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model.PrAnalyzerEffect

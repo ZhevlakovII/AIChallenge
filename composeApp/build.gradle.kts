@@ -16,8 +16,17 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_21)
         }
     }
-
     jvm()
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { target ->
+        target.binaries.framework {
+            baseName = project.name
+            isStatic = true
+        }
+    }
 
     sourceSets {
         androidMain.dependencies {

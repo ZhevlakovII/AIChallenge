@@ -9,7 +9,7 @@ import ru.izhxx.aichallenge.logic.configurator.config
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
-//    id("lint")
+    id("lint")
 }
 
 /*

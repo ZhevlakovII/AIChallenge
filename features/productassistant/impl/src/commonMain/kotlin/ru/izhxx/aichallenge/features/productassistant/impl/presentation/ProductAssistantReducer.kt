@@ -1,6 +1,5 @@
 package ru.izhxx.aichallenge.features.productassistant.impl.presentation
 
-import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviReducer
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.mapper.ProductAssistantUiMapper
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.ProductAssistantResult
 import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.ProductAssistantState
