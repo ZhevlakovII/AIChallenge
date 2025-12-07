@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -467,10 +468,12 @@ private fun ResponseContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Main answer
-            Text(
-                text = response.answer,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            SelectionContainer {
+                Text(
+                    text = response.answer,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
 
             // Related tickets
             if (response.relatedTickets.isNotEmpty()) {

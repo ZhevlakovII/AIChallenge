@@ -8,11 +8,11 @@ import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.Pr
  * MVI Reducer for Product Assistant
  * Handles state updates based on results from business logic
  */
-class ProductAssistantReducer : MviReducer<ProductAssistantState, ProductAssistantResult> {
+class ProductAssistantReducer {
 
     private val mapper = ProductAssistantUiMapper()
 
-    override fun reduce(
+    fun reduce(
         state: ProductAssistantState,
         result: ProductAssistantResult
     ): ProductAssistantState {

@@ -25,14 +25,14 @@ class PrAnalyzerExecutor(
     private val analyzePrWithLlmUseCase: AnalyzePrWithLlmUseCase,
     private val generateReportUseCase: GenerateReportUseCase,
     private val mapper: PrAnalysisUiMapper
-) : MviExecutor<PrAnalyzerIntent, PrAnalyzerResult, PrAnalyzerEffect> {
+) {
 
     // Cache for current PR URL parts
     private var currentOwner: String? = null
     private var currentRepo: String? = null
     private var currentPrNumber: Int? = null
 
-    override suspend fun execute(
+    suspend fun execute(
         intent: PrAnalyzerIntent,
         emitResult: suspend (PrAnalyzerResult) -> Unit,
         emitEffect: suspend (PrAnalyzerEffect) -> Unit

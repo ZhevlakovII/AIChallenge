@@ -26,7 +26,7 @@ import kotlin.time.ExperimentalTime
 @ExperimentalTime
 class PrAnalyzerViewModel(
     private val executor: PrAnalyzerExecutor
-) : ViewModel(), MviViewModel<PrAnalyzerIntent, PrAnalyzerResult, PrAnalyzerState, PrAnalyzerEffect> {
+) : ViewModel(), MviViewModel<PrAnalyzerState, PrAnalyzerEffect, PrAnalyzerIntent> {
 
     // Initial state
     private val initialState = PrAnalyzerState(
@@ -55,7 +55,7 @@ class PrAnalyzerViewModel(
     override val effects: Flow<PrAnalyzerEffect> = _effects.receiveAsFlow()
 
     // Pure reducer function for state transformation
-    private val reducer = MviReducer<PrAnalyzerState, PrAnalyzerResult> { currentState, result ->
+    private val reducer: (PrAnalyzerState, PrAnalyzerResult) -> PrAnalyzerState = { currentState, result ->
         when (result) {
             is PrAnalyzerResult.UrlValidated -> {
                 currentState.copy(

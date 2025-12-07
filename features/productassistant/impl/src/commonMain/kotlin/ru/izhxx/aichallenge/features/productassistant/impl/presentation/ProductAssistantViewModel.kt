@@ -23,7 +23,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.presentation.model.Pr
  */
 class ProductAssistantViewModel(
     private val executor: ProductAssistantExecutor
-) : ViewModel(), MviViewModel<ProductAssistantIntent, ProductAssistantResult, ProductAssistantState, ProductAssistantEffect> {
+) : ViewModel(), MviViewModel<ProductAssistantState, ProductAssistantEffect, ProductAssistantIntent> {
 
     // Initial state
     private val initialState = ProductAssistantState()

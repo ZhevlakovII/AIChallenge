@@ -16,6 +16,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.Document
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.ResponseSource
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.SourceType
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.SupportTicket
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.TicketComment
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.TicketStatus
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.repository.ProductAssistantRepository
 import kotlin.time.Clock
@@ -50,6 +51,19 @@ class ProductAssistantRepositoryImpl(
 
             ticketsArray.map { ticketElement ->
                 val ticketObj = ticketElement.jsonObject
+                val commentsArray = ticketObj["comments"]?.jsonArray ?: emptyList()
+                val comments = commentsArray.map { commentElement ->
+                    val commentObj = commentElement.jsonObject
+                    TicketComment(
+                        id = commentObj["id"]?.jsonPrimitive?.content ?: "",
+                        authorId = commentObj["authorId"]?.jsonPrimitive?.content ?: "",
+                        authorName = commentObj["authorName"]?.jsonPrimitive?.content ?: "",
+                        content = commentObj["content"]?.jsonPrimitive?.content ?: "",
+                        createdAt = Instant.parse(commentObj["createdAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
+                        isInternal = commentObj["isInternal"]?.jsonPrimitive?.content?.toBoolean() ?: false
+                    )
+                }
+
                 SupportTicket(
                     id = ticketObj["id"]?.jsonPrimitive?.content ?: "",
                     userId = ticketObj["userId"]?.jsonPrimitive?.content ?: "",
@@ -57,8 +71,9 @@ class ProductAssistantRepositoryImpl(
                     description = ticketObj["description"]?.jsonPrimitive?.content ?: "",
                     status = TicketStatus.fromString(ticketObj["status"]?.jsonPrimitive?.content ?: "open"),
                     createdAt = Instant.parse(ticketObj["createdAt"]?.jsonPrimitive?.content ?: ""),
-                    updatedAt = Instant.parse(result["updatedAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
-                    tags = ticketObj["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+                    updatedAt = Instant.parse(ticketObj["updatedAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
+                    tags = ticketObj["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                    comments = comments
                 )
             }
         }
@@ -69,6 +84,19 @@ class ProductAssistantRepositoryImpl(
             val result = ticketMcpDataSource.getTicket(ticketId).getOrNull()
                 ?: return@runCatching null
 
+            val commentsArray = result["comments"]?.jsonArray ?: emptyList()
+            val comments = commentsArray.map { commentElement ->
+                val commentObj = commentElement.jsonObject
+                TicketComment(
+                    id = commentObj["id"]?.jsonPrimitive?.content ?: "",
+                    authorId = commentObj["authorId"]?.jsonPrimitive?.content ?: "",
+                    authorName = commentObj["authorName"]?.jsonPrimitive?.content ?: "",
+                    content = commentObj["content"]?.jsonPrimitive?.content ?: "",
+                    createdAt = Instant.parse(commentObj["createdAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
+                    isInternal = commentObj["isInternal"]?.jsonPrimitive?.content?.toBoolean() ?: false
+                )
+            }
+
             SupportTicket(
                 id = result["id"]?.jsonPrimitive?.content ?: "",
                 userId = result["userId"]?.jsonPrimitive?.content ?: "",
@@ -77,7 +105,8 @@ class ProductAssistantRepositoryImpl(
                 status = TicketStatus.fromString(result["status"]?.jsonPrimitive?.content ?: "open"),
                 createdAt = Instant.parse(result["createdAt"]?.jsonPrimitive?.content ?: ""),
                 updatedAt = Instant.parse(result["updatedAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
-                tags = result["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+                tags = result["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                comments = comments
             )
         }
     }
@@ -321,7 +350,7 @@ class ProductAssistantRepositoryImpl(
         return runCatching {
             ticketMcpDataSource.updateTicket(
                 ticketId = ticketId,
-                newStatus = newStatus.name
+                newStatus = newStatus.name.lowercase()
             ).getOrThrow()
             Unit
         }

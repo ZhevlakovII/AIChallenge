@@ -15,7 +15,21 @@ data class SupportTicket(
     val status: TicketStatus,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val tags: List<String>
+    val tags: List<String>,
+    val comments: List<TicketComment> = emptyList()
+)
+
+/**
+ * Domain model for a ticket comment
+ */
+@ExperimentalTime
+data class TicketComment(
+    val id: String,
+    val authorId: String,
+    val authorName: String,
+    val content: String,
+    val createdAt: Instant,
+    val isInternal: Boolean = false
 )
 
 /**
@@ -24,7 +38,8 @@ data class SupportTicket(
 enum class TicketStatus {
     OPEN,
     IN_PROGRESS,
-    RESOLVED;
+    RESOLVED,
+    CLOSED;
 
     companion object {
         fun fromString(value: String): TicketStatus {
@@ -32,6 +47,7 @@ enum class TicketStatus {
                 "open" -> OPEN
                 "in_progress" -> IN_PROGRESS
                 "resolved" -> RESOLVED
+                "closed" -> CLOSED
                 else -> OPEN
             }
         }
@@ -42,6 +58,7 @@ enum class TicketStatus {
             OPEN -> "Открыт"
             IN_PROGRESS -> "В работе"
             RESOLVED -> "Решён"
+            CLOSED -> "Закрыт"
         }
     }
 }

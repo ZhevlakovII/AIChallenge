@@ -3,7 +3,7 @@ package ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model
 /**
  * Results from MVI Executor for PR Analyzer
  */
-sealed interface PrAnalyzerResult : MviResult {
+sealed interface PrAnalyzerResult {
     /**
      * Result of URL validation
      */

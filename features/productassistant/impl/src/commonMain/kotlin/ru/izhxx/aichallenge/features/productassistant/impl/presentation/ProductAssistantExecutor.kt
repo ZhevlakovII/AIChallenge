@@ -18,13 +18,13 @@ class ProductAssistantExecutor(
     private val generateAnswerUseCase: GenerateAnswerUseCase,
     private val createTicketUseCase: CreateTicketUseCase,
     private val updateTicketUseCase: UpdateTicketUseCase
-) : MviExecutor<ProductAssistantIntent, ProductAssistantResult, ProductAssistantEffect> {
+) {
 
     // Cache for current state values needed for async operations
     private var currentQuery: String = ""
     private var currentMode: AssistantMode = AssistantMode.FULL
 
-    override suspend fun execute(
+    suspend fun execute(
         intent: ProductAssistantIntent,
         emitResult: suspend (ProductAssistantResult) -> Unit,
         emitEffect: suspend (ProductAssistantEffect) -> Unit
