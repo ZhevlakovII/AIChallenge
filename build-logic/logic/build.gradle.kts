@@ -14,6 +14,7 @@ dependencies {
     implementation(libs.android.gradle)
     implementation(libs.compose.gradle)
     implementation(libs.detekt.gradle)
+    implementation(libs.room.gradle)
 
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 }

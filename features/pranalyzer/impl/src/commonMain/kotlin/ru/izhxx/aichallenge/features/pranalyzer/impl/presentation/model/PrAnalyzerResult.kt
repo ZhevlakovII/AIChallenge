@@ -1,7 +1,5 @@
 package ru.izhxx.aichallenge.features.pranalyzer.impl.presentation.model
 
-import ru.izhxx.aichallenge.core.ui.mvi.model.MviResult
-
 /**
  * Results from MVI Executor for PR Analyzer
  */

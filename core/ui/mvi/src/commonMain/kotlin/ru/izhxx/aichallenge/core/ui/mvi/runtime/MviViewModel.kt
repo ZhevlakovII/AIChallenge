@@ -4,7 +4,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import ru.izhxx.aichallenge.core.ui.mvi.model.MviEffect
 import ru.izhxx.aichallenge.core.ui.mvi.model.MviIntent
-import ru.izhxx.aichallenge.core.ui.mvi.model.MviResult
 import ru.izhxx.aichallenge.core.ui.mvi.model.MviState
 
 /**
@@ -13,38 +12,38 @@ import ru.izhxx.aichallenge.core.ui.mvi.model.MviState
  * Назначение:
  * - Единая точка оркестрации MVI для конкретного экрана/фичи.
  * - Хранит текущее [state] как единственный источник правды.
- * - Принимает входящие [MviIntent] через [accept], запускает исполнение (через исполнителя‑слой),
- *   преобразует результаты [MviResult] редьюсером в новое [MviState], эмитит одноразовые [MviEffect] в [effects].
+ * - Принимает входящие [MviIntent] через [accept], запускает исполнение,
+ *   преобразует результаты в новое [MviState], эмитит одноразовые [MviEffect] в [effects].
  *
  * Минимальный конвейер (без Action‑слоя):
- * UI → Intent → (Executor) → Result/Effect → Reducer(State × Result → State) → UI.
+ * UI → Intent → Executing → Result → Reduce(State × Result → State) → UI.
  *
  * Свойства:
  * - [state] — долгоживущий поток состояний для рендера (обычно наблюдается в Compose через collectAsState()).
  * - [effects] — одноразовые события (навигация, сообщения, диалоги), не хранятся в [MviState] и
  *   не должны воспроизводиться повторно при пересоздании подписки.
  *
- * Правила и рекомендации:
+ * Правила:
  * - [MviState] должен быть неизменяемым (immutability). Обновление состояния происходит только
- *   через редьюсер по входящему [MviResult].
+ *   после обработки [MviIntent].
  * - [MviEffect] используйте для всего, что не должно быть частью долгоживущего состояния.
  * - [accept] должна быть потокобезопасной; реализация обычно опирается на корутины/Flow.
  *
- * Рекомендации по использованию в Compose:
- * - Подписывайтесь на [state]: `val uiState by viewModel.state.collectAsState()`.
+ * Обязательства по использованию в Compose:
+ * - Подписывайтесь на [state]: `val uiState by viewModel.state.collectAsStateWithLifecycle()`.
  * - Подписывайтесь на [effects] в `LaunchedEffect(viewModel)` и обрабатывайте каждое событие один раз.
  *
  * Типизация:
- * - Для каждого экрана определяются собственные sealed‑иерархии типов [I], [R], [S], [E].
+ * - Для каждого экрана определяются собственные sealed‑иерархии типов [S], [E], [I].
  *
  * Пример (схема):
  * ```
- * interface SearchViewModel : MviViewModel<SearchIntent, SearchResult, SearchState, SearchEffect>
+ * interface SearchViewModel : MviViewModel<SearchState, SearchEffect, SearchIntent>
  *
  * // В UI (Compose):
- * val state by vm.state.collectAsState()
- * LaunchedEffect(vm) {
- *   vm.effects.collect { effect ->
+ * val state by viewModel.state.collectAsStateWithLifecycle()
+ * LaunchedEffect(viewModel) {
+ *   viewModel.effects.collect { effect ->
  *     when (effect) {
  *       is SearchEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.text)
  *       is SearchEffect.NavigateToDetails -> navigator.openDetails(effect.id)
@@ -53,7 +52,7 @@ import ru.izhxx.aichallenge.core.ui.mvi.model.MviState
  * }
  * ```
  */
-interface MviViewModel<I : MviIntent, R : MviResult, S : MviState, E : MviEffect> {
+interface MviViewModel<S : MviState, E : MviEffect, I : MviIntent> {
     /**
      * Текущее долгоживущее состояние экрана.
      */

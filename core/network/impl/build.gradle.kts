@@ -18,5 +18,7 @@ kotlin {
 
         implementation(libs.ktor.clientCore)
         implementation(libs.ktor.clientLogging)
+
+        implementation(libs.kotlinx.serialization.json)
     }
 }

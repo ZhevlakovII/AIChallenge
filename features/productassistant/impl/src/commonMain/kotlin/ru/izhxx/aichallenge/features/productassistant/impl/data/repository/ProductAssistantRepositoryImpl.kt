@@ -18,6 +18,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.SourceTy
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.SupportTicket
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.TicketStatus
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.repository.ProductAssistantRepository
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 /**
@@ -56,6 +57,7 @@ class ProductAssistantRepositoryImpl(
                     description = ticketObj["description"]?.jsonPrimitive?.content ?: "",
                     status = TicketStatus.fromString(ticketObj["status"]?.jsonPrimitive?.content ?: "open"),
                     createdAt = Instant.parse(ticketObj["createdAt"]?.jsonPrimitive?.content ?: ""),
+                    updatedAt = Instant.parse(result["updatedAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
                     tags = ticketObj["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
                 )
             }
@@ -74,6 +76,7 @@ class ProductAssistantRepositoryImpl(
                 description = result["description"]?.jsonPrimitive?.content ?: "",
                 status = TicketStatus.fromString(result["status"]?.jsonPrimitive?.content ?: "open"),
                 createdAt = Instant.parse(result["createdAt"]?.jsonPrimitive?.content ?: ""),
+                updatedAt = Instant.parse(result["updatedAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
                 tags = result["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
             )
         }
@@ -291,5 +294,52 @@ class ProductAssistantRepositoryImpl(
         }
 
         return confidence.coerceIn(0.0, 1.0)
+    }
+
+    override suspend fun createTicket(ticket: SupportTicket): Result<SupportTicket> {
+        return runCatching {
+            val result = ticketMcpDataSource.createTicket(
+                title = ticket.title,
+                description = ticket.description,
+                tags = ticket.tags
+            ).getOrThrow()
+
+            SupportTicket(
+                id = result["id"]?.jsonPrimitive?.content.orEmpty(),
+                userId = ticket.userId,
+                title = result["title"]?.jsonPrimitive?.content ?: ticket.title,
+                description = result["description"]?.jsonPrimitive?.content ?: ticket.description,
+                status = TicketStatus.fromString(result["status"]?.jsonPrimitive?.content ?: TicketStatus.OPEN.name),
+                createdAt = Instant.parse(result["createdAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
+                updatedAt = Instant.parse(result["updatedAt"]?.jsonPrimitive?.content ?: Clock.System.now().toString()),
+                tags = result["tags"]?.jsonArray?.map { it.jsonPrimitive.content } ?: ticket.tags
+            )
+        }
+    }
+
+    override suspend fun updateTicketStatus(ticketId: String, newStatus: TicketStatus): Result<Unit> {
+        return runCatching {
+            ticketMcpDataSource.updateTicket(
+                ticketId = ticketId,
+                newStatus = newStatus.name
+            ).getOrThrow()
+            Unit
+        }
+    }
+
+    override suspend fun updateTicketComment(ticketId: String, comment: String): Result<Unit> {
+        return runCatching {
+            ticketMcpDataSource.updateTicket(
+                ticketId = ticketId,
+                comment = comment
+            ).getOrThrow()
+            Unit
+        }
+    }
+
+    override suspend fun getTicket(ticketId: String): Result<SupportTicket> {
+        return getTicketById(ticketId).map { ticket ->
+            ticket ?: throw IllegalStateException("Ticket not found: $ticketId")
+        }
     }
 }

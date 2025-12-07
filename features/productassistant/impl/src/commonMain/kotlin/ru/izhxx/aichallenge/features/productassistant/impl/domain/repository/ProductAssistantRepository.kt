@@ -4,6 +4,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.Assistan
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.AssistantResponse
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.DocumentationItem
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.SupportTicket
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.TicketStatus
 import kotlin.time.ExperimentalTime
 
 /**
@@ -74,4 +75,38 @@ interface ProductAssistantRepository {
         faqContext: List<DocumentationItem>,
         ticketContext: List<SupportTicket>
     ): Result<AssistantResponse>
+
+    /**
+     * Create a new support ticket
+     *
+     * @param ticket Support ticket to create
+     * @return Result containing the created ticket with assigned ID
+     */
+    suspend fun createTicket(ticket: SupportTicket): Result<SupportTicket>
+
+    /**
+     * Update ticket status
+     *
+     * @param ticketId Ticket ID
+     * @param newStatus New status
+     * @return Result indicating success or failure
+     */
+    suspend fun updateTicketStatus(ticketId: String, newStatus: TicketStatus): Result<Unit>
+
+    /**
+     * Add comment to ticket
+     *
+     * @param ticketId Ticket ID
+     * @param comment Comment text
+     * @return Result indicating success or failure
+     */
+    suspend fun updateTicketComment(ticketId: String, comment: String): Result<Unit>
+
+    /**
+     * Get ticket by ID (convenience method that returns SupportTicket directly)
+     *
+     * @param ticketId Ticket ID
+     * @return Result containing the support ticket
+     */
+    suspend fun getTicket(ticketId: String): Result<SupportTicket>
 }

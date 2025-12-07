@@ -4,7 +4,6 @@ import ru.izhxx.aichallenge.core.foundation.logger.LogLevel.ERROR
 import ru.izhxx.aichallenge.core.foundation.logger.LogLevel.NONE
 import ru.izhxx.aichallenge.core.foundation.logger.LogLevel.WARN
 
-
 /**
  * Уровни логирования.
  *

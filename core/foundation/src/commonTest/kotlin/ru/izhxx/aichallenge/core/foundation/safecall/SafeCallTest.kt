@@ -86,7 +86,6 @@ class SafeCallTest {
 
     @Test
     fun `suspendedSafeCall rethrows CancellationException`() = runTest {
-
         assertFailsWith<CancellationException> {
             suspendedSafeCall { throw CancellationException("cancel-s") }
         }

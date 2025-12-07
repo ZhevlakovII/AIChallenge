@@ -1,324 +1,193 @@
 package ru.izhxx.aichallenge.core.foundation.error
 
 /**
- * Базовый контракт для всех ошибок приложения.
- * Содержит общие поля, набор зарезервированных ключей метаданных
- * и конкретные типы ошибок как вложенные типы для удобного API и стабильности ABI.
+ * Единый класс для ошибок в проекте. Позволяет конвертировать различные типы [Throwable] в конкретные типы.
  *
- * @property category Категории ошибок. Определяются бизнес-требованиями
- * @property code Машино-читабельный ключ, для дополнительной муршрутизации ошибок. Примеры: "network.timeout", "http.404", "domain.user.not_found".
- * @property severity Уровень серьёзности ошибки. См. [ErrorSeverity] для возможных значений
- * @property flags Набор флагов, описывающих поведение для ошибки. См [ErrorFlag] для возможных значений
- * @property rawMessage Сырой текст ошибки
- * @property cause Оригинальная ошибка. Заполняется при наличии
- * @property metadata Дополнительные структурные атрибуты для логов и/или роутинга.
+ * @property severity Уровень ошибки.
+ * @property retry Поведение после получения ошибки.
+ * @property rawMessage Исходное сообщение из [Throwable].
+ * @property cause Оригинальный [Throwable].
+ * @property metadata дополнительные данные, связанные с ошибкой: место вызова, сервис и прочие данные.
+ *
+ * @see ErrorSeverity
+ * @see ErrorRetry
+ * @see MetadataKey
+ * @see Throwable
  */
-// TODO(Необходимо переписать сборку ошибок, скрыть внутренние данные)
-sealed interface AppError {
-    val category: ErrorCategory
-    val code: String
-    val severity: ErrorSeverity
-    val flags: Set<ErrorFlag>
-    val rawMessage: String
-    val cause: Throwable?
-    val metadata: Map<MetadataKey, String>
+// TODO(Дополнить документацию по ошибкам)
+sealed class AppError(
+    val severity: ErrorSeverity,
+    val retry: ErrorRetry,
+    val cause: Throwable? = null,
+    val rawMessage: String? = cause?.message,
+    val metadata: Map<MetadataKey, String> = emptyMap()
+) {
+    /* Дальше идут конкретные типы ошибок */
 
-    // ---- Вложенные конкретные типы ошибок ----
+    /* Ошибки сетевого уровня */
 
-    /**
-     * Ошибка сетевого уровня (DNS, соединение, TLS, транспорт).
-     *
-     * @property code Машино-читабельный ключ, для дополнительной муршрутизации ошибок. Примеры: "network.timeout", "http.404", "domain.user.not_found".
-     * @property severity Уровень серьёзности ошибки. См. [ErrorSeverity] для возможных значений
-     * @property flags Набор флагов, описывающих поведение для ошибки. См [ErrorFlag] для возможных значений
-     * @property rawMessage Сырой текст ошибки
-     * @property cause Оригинальная ошибка. Заполняется при наличии
-     * @property metadata Дополнительные структурные атрибуты для логов и/или роутинга.
-     *
-     * @see ErrorCategory.Network
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class NetworkError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Network
-    }
+    object NetworkUnavailable : AppError(
+        severity = ErrorSeverity.Critical,
+        retry = ErrorRetry.Allowed
+    )
 
-    /**
-     * Ошибка уровня HTTP-протокола.
-     *
-     * @property code Машино-читабельный ключ, для дополнительной муршрутизации ошибок. Примеры: "network.timeout", "http.404", "domain.user.not_found".
-     * @property status HTTP-статус ответа (например, 404, 500). См. [MetadataKeys.HTTP_STATUS].
-     * @property method HTTP-метод запроса ("GET", "POST"). См. [MetadataKeys.METHOD].
-     * @property url Полный URL запроса. См. [MetadataKeys.URL].
-     * @property severity Серьёзность ошибки (влияет на обработку в UI/логике).
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Http
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class HttpError(
-        override val code: String,
-        val status: Int,
-        val method: String,
-        val url: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Http
-    }
+    object NetworkTimeout : AppError(
+        severity = ErrorSeverity.Error,
+        retry = ErrorRetry.Allowed
+    )
 
-    /**
-     * Ошибка сериализации/десериализации данных.
-     *
-     * @property code Машинный код (например, "serialization.decode_error").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Serialization
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class SerializationError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Serialization
-    }
+    class NetworkSecurity(
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap()
+    ) : AppError(
+        severity = ErrorSeverity.Critical,
+        retry = ErrorRetry.Forbidden,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
 
-    /**
-     * Ошибка валидации входных данных/контрактов.
-     *
-     * @property code Машинный код (например, "validation.invalid_field").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Validation
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class ValidationError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Validation
-    }
+    class HttpError<M : Any>(
+        val code: Int,
+        val parsedMessage: M? = null,
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap()
+    ) : AppError(
+        severity = ErrorSeverity.Error,
+        retry = when (code) {
+            429 -> ErrorRetry.Allowed
+            in 500..599 -> ErrorRetry.Allowed
+            else -> ErrorRetry.Forbidden
+        },
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = buildMap(metadata.size + 2) {
+            put(MetadataKey("code"), code.toString())
+            putAll(metadata)
+        }
+    )
 
-    /**
-     * Ошибка подсистемы хранения/IO (файлы, БД).
-     *
-     * @property code Машинный код (например, "store.write_failed").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Storage
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class StorageError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Storage
-    }
+    /* Ошибки авторизации */
+    object TokenExpired : AppError(
+        severity = ErrorSeverity.Critical,
+        retry = ErrorRetry.Allowed,
+    )
 
-    /**
-     * Ошибка аутентификации пользователя/сессии.
-     *
-     * @property code Машинный код (например, "auth.token_expired").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Auth
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class AuthError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Auth
-    }
+    object InvalidCredentials : AppError(
+        severity = ErrorSeverity.Warning,
+        retry = ErrorRetry.Forbidden,
+    )
 
-    /**
-     * Ошибка авторизации/прав доступа.
-     *
-     * @property code Машинный код (например, "permission.denied").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Permission
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class PermissionError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Permission
-    }
+    object Unauthorized : AppError(
+        severity = ErrorSeverity.Critical,
+        retry = ErrorRetry.Forbidden,
+    )
 
-    /**
-     * Ошибка превышения времени ожидания операции.
-     *
-     * @property code Машинный код (например, "network.timeout").
-     * @property timeoutMillis Таймаут операции в миллисекундах, если известен. См. [MetadataKeys.TIMEOUT_MILLIS].
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Timeout
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class TimeoutError(
-        override val code: String,
-        val timeoutMillis: Long? = null,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Timeout
-    }
+    object ForbiddenPermissions : AppError(
+        severity = ErrorSeverity.Critical,
+        retry = ErrorRetry.Forbidden,
+    )
 
-    /**
-     * Ошибка лимитирования запросов (rate limiting).
-     *
-     * @property code Машинный код (например, "rate_limit.exceeded").
-     * @property retryAfterSeconds Рекомендуемая задержка перед повтором (в секундах), если известна. См. [MetadataKeys.RETRY_AFTER_SECONDS].
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.RateLimit
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class RateLimitError(
-        override val code: String,
+    /* Ошибки, связанные с файловой системой */
+    object FileNotFound : AppError(
+        severity = ErrorSeverity.Critical,
+        retry = ErrorRetry.Forbidden,
+    )
+
+    class Storage(
+        val path: String?,
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap()
+    ) : AppError(
+        severity = ErrorSeverity.Error,
+        retry = ErrorRetry.Forbidden,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata,
+    )
+
+    /* Сериализация и валидация */
+    class SerializationError(
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap(),
+    ) : AppError(
+        severity = ErrorSeverity.Error,
+        retry = ErrorRetry.Forbidden,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
+
+    class ValidationError(
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap(),
+    ) : AppError(
+        severity = ErrorSeverity.Error,
+        retry = ErrorRetry.Forbidden,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
+
+    /* Ошибки, связанные с лимитами */
+    class RateLimitError(
         val retryAfterSeconds: Long? = null,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.RateLimit
-    }
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap(),
+    ) : AppError(
+        severity = ErrorSeverity.Error,
+        retry = ErrorRetry.Allowed,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
 
-    /**
-     * Универсальная доменная ошибка уровня бизнес-логики.
-     * Рекомендуется кодировать доменные кейсы через [code] и [metadata].
-     *
-     * @property code Машинный код доменной ошибки (например, "domain.user.not_found").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Domain
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class DomainError(
-        override val code: String,
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Domain
-    }
+    /* Ошибки, связанные с пермишенами */
+    class PermissionError(
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap(),
+    ) : AppError(
+        severity = ErrorSeverity.Error,
+        retry = ErrorRetry.Allowed,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
 
-    /**
-     * Ошибка по умолчанию для неожиданных/немаппленных ситуаций.
-     *
-     * @property code Машинный код (по умолчанию "unknown.unexpected").
-     * @property severity Серьёзность ошибки.
-     * @property flags Флаги поведения (см. [ErrorFlag]).
-     * @property rawMessage Нелокализованное сообщение для логов/диагностики.
-     * @property cause Исходная причина, если есть.
-     * @property metadata Дополнительные атрибуты (используйте [MetadataKeys]).
-     *
-     * @see ErrorCategory.Unknown
-     * @see ErrorSeverity
-     * @see ErrorFlag
-     * @see MetadataKeys
-     */
-    data class UnknownError(
-        override val code: String = "unknown.unexpected",
-        override val severity: ErrorSeverity = ErrorSeverity.Error,
-        override val flags: Set<ErrorFlag> = emptySet(),
-        override val rawMessage: String = "",
-        override val cause: Throwable? = null,
-        override val metadata: Map<MetadataKey, String> = emptyMap(),
-    ) : AppError {
-        override val category: ErrorCategory = ErrorCategory.Unknown
-    }
+    /* Ошибки доменного слоя */
+    class DomainError(
+        severity: ErrorSeverity,
+        retry: ErrorRetry,
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap(),
+    ) : AppError(
+        severity = severity,
+        retry = retry,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
+
+    /* Неизвестные ошибки */
+    class UnknownError(
+        severity: ErrorSeverity,
+        retry: ErrorRetry,
+        cause: Throwable? = null,
+        rawMessage: String? = cause?.message,
+        metadata: Map<MetadataKey, String> = emptyMap(),
+    ) : AppError(
+        severity = severity,
+        retry = retry,
+        cause = cause,
+        rawMessage = rawMessage,
+        metadata = metadata
+    )
 }

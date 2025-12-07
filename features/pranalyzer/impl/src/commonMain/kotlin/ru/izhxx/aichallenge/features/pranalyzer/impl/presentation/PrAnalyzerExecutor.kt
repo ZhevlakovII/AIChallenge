@@ -1,6 +1,5 @@
 package ru.izhxx.aichallenge.features.pranalyzer.impl.presentation
 
-import ru.izhxx.aichallenge.core.ui.mvi.runtime.MviExecutor
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.usecase.AnalyzePrWithLlmUseCase
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.usecase.FetchPrDiffUseCase
 import ru.izhxx.aichallenge.features.pranalyzer.impl.domain.usecase.FetchPrInfoUseCase
