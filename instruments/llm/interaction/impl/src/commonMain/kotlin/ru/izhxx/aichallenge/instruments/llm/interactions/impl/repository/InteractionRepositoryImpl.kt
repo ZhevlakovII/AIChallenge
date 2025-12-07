@@ -7,7 +7,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
@@ -37,7 +36,7 @@ import ru.izhxx.aichallenge.instruments.llm.interactions.impl.model.request.Requ
 import ru.izhxx.aichallenge.instruments.llm.interactions.impl.model.response.AnswerDTO
 
 // TODO(заполнить документацию)
-class InteractionRepositoryImpl(
+internal class InteractionRepositoryImpl(
     private val httpClient: HttpClient,
     private val json: Json
 ) : InteractionRepository {
@@ -144,7 +143,6 @@ class InteractionRepositoryImpl(
         val response = httpClient.post {
             url(providerConfig.apiUrl.data)
             header(HttpHeaders.Authorization, HEADER_AUTH_BEARER + providerConfig.apiKey)
-            header(HttpHeaders.ContentType, ContentType.Application.Json)
             setBody(request)
         }
 

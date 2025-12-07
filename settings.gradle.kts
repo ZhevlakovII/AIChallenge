@@ -43,7 +43,7 @@ plugins {
 val targetRoots = listOf(
     "core",
     "designsystem",
-    "instruments",
+//    "instruments",
     "features",
     "app",
     "targets",
