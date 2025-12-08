@@ -20,7 +20,8 @@ class TicketMcpDataSourceImpl(
         private const val TOOL_LIST_TICKETS = "support.list_tickets"
         private const val TOOL_GET_TICKET = "support.get_ticket"
         private const val TOOL_CREATE_TICKET = "support.create_ticket"
-        private const val TOOL_UPDATE_TICKET = "support.update_ticket_status"
+        private const val TOOL_UPDATE_TICKET_STATUS = "support.update_ticket_status"
+        private const val TOOL_ADD_COMMENT = "support.add_comment"
     }
 
     override suspend fun listTickets(
@@ -91,17 +92,38 @@ class TicketMcpDataSourceImpl(
         comment: String?
     ): Result<JsonObject> {
         return runCatching {
-            val args = buildJsonObject {
-                put("ticket_id", ticketId)
-                newStatus?.let { put("status", it) }
-                comment?.let { put("comment", it) }
-            }
+            // If only comment (without status change), use add_comment tool
+            when {
+                newStatus != null && comment.isNullOrEmpty() -> {
+                    val args = buildJsonObject {
+                        put("ticket_id", ticketId)
+                        put("status", newStatus)
+                        comment?.let { put("comment", it) }
+                    }
 
-            mcpRepository.callTool(
-                wsUrl = SUPPORT_SERVER_URL,
-                name = TOOL_UPDATE_TICKET,
-                arguments = args
-            ).getOrThrow().jsonObject
+                    mcpRepository.callTool(
+                        wsUrl = SUPPORT_SERVER_URL,
+                        name = TOOL_UPDATE_TICKET_STATUS,
+                        arguments = args
+                    ).getOrThrow().jsonObject
+                }
+                newStatus == null && !comment.isNullOrEmpty() -> {
+                    val args = buildJsonObject {
+                        put("ticket_id", ticketId)
+                        put("author_id", "current_user") // TODO: Get actual user ID
+                        put("author_name", "User") // TODO: Get actual user name
+                        put("content", comment)
+                        put("is_internal", false)
+                    }
+
+                    mcpRepository.callTool(
+                        wsUrl = SUPPORT_SERVER_URL,
+                        name = TOOL_ADD_COMMENT,
+                        arguments = args
+                    ).getOrThrow().jsonObject
+                }
+                else -> throw IllegalStateException("Invalid request")
+            }
         }
     }
 }

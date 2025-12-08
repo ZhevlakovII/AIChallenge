@@ -32,8 +32,8 @@ internal class UpdateTicketUseCaseImpl(
             )
             
             // Add comment if provided
-            comment?.let { 
-                repository.updateTicketComment(ticketId, it)
+            comment?.let { com ->
+                repository.updateTicketComment(ticketId, com)
                     .getOrElse { return Result.failure(it) }
             }
             

@@ -6,7 +6,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.domain.model.Assistan
 /**
  * Results from business logic operations
  */
-sealed interface ProductAssistantResult : MviResult {
+sealed interface ProductAssistantResult {
     /**
      * Query input changed
      */

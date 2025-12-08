@@ -37,6 +37,7 @@ class ProductAssistantUiMapper {
             TicketStatus.OPEN -> 0xFFE57373L to "Открыт"
             TicketStatus.IN_PROGRESS -> 0xFFFFB74DL to "В работе"
             TicketStatus.RESOLVED -> 0xFF81C784L to "Решён"
+            TicketStatus.CLOSED -> 0xFF26EB9C to "Закрыт"
         }
 
         val dateTime = ticket.createdAt.toLocalDateTime(TimeZone.currentSystemDefault())

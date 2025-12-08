@@ -1,20 +1,55 @@
 {
     "tickets": [
         {
-            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            "userId": "user-001",
-            "title": "Не работает авторизация через API ключ",
-            "description": "После ввода API ключа от OpenAI приложение выдает ошибку 401 Unauthorized. Проверил ключ в личном кабинете OpenAI - он активен и валиден. Пробовал переустановить приложение, но проблема осталась.",
-            "status": "closed",
-            "createdAt": "2025-11-28T10:15:30Z",
-            "updatedAt": "2025-12-04T18:11:58.372032400Z",
+            "id": "ticket-001",
+            "userId": "user-123",
+            "title": "Проблема с авторизацией через API ключ",
+            "description": "Не могу авторизоваться в системе используя API ключ OpenAI. Получаю ошибку 401 Unauthorized.",
+            "status": "open",
+            "createdAt": "2025-01-15T10:30:00Z",
+            "updatedAt": "2025-12-07T13:42:34.637949Z",
             "comments": [
                 {
-                    "id": "7a77690e-55a2-484a-808f-d1acfdde9641",
-                    "authorId": "system",
-                    "authorName": "System",
-                    "content": "Статус изменен с 'open' на 'closed': Статус тикета изменен с open на closed по запросу пользователя",
-                    "createdAt": "2025-12-04T18:11:58.372032400Z"
+                    "id": "9e35e201-b20b-4a30-a485-3a3ff2dc07f5",
+                    "authorId": "current_user",
+                    "authorName": "User",
+                    "content": "фывфыв",
+                    "createdAt": "2025-12-07T13:15:37.291722200Z"
+                },
+                {
+                    "id": "8cfb7384-76ca-4a34-9602-8ecd089a1fdf",
+                    "authorId": "current_user",
+                    "authorName": "User",
+                    "content": "вфыв",
+                    "createdAt": "2025-12-07T13:15:51.483594400Z"
+                },
+                {
+                    "id": "bbd9e867-5413-489d-8e19-93326c9dc9a0",
+                    "authorId": "current_user",
+                    "authorName": "User",
+                    "content": "asjdhlas;dad",
+                    "createdAt": "2025-12-07T13:29:48.492825200Z"
+                },
+                {
+                    "id": "8479f5cc-d185-45a3-affd-941aa9631a69",
+                    "authorId": "current_user",
+                    "authorName": "User",
+                    "content": "asdasdasdasd",
+                    "createdAt": "2025-12-07T13:29:59.864138100Z"
+                },
+                {
+                    "id": "574849c3-9bc3-4e09-8410-c28f8b1578ca",
+                    "authorId": "current_user",
+                    "authorName": "User",
+                    "content": "dsfsdfsad",
+                    "createdAt": "2025-12-07T13:34:55.441431200Z"
+                },
+                {
+                    "id": "37c72007-b489-4350-8dde-ed9c67be57fd",
+                    "authorId": "current_user",
+                    "authorName": "User",
+                    "content": "Прототип для \"CRM техпода с функцией чата с LLM\"",
+                    "createdAt": "2025-12-07T13:42:34.630928Z"
                 }
             ],
             "tags": [
@@ -24,193 +59,142 @@
             ]
         },
         {
-            "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-            "userId": "user-042",
-            "title": "Запросы к LLM-серверу не проходят",
-            "description": "При попытке отправить сообщение в чат появляется ошибка 'Connection timeout'. Интернет работает нормально, другие приложения подключаются без проблем. Использую Anthropic Claude с корректным baseUrl.",
+            "id": "ticket-002",
+            "userId": "user-456",
+            "title": "Сетевая ошибка при подключении к серверу",
+            "description": "При попытке подключиться к серверу возникает ошибка Network Timeout. Проблема возникает периодически.",
             "status": "in_progress",
-            "createdAt": "2025-11-29T14:22:45Z",
-            "updatedAt": "2025-11-29T14:22:45Z",
-            "assignedTo": "support-agent-001",
+            "createdAt": "2025-01-14T14:20:00Z",
+            "updatedAt": "2025-01-15T09:15:00Z",
+            "assignedTo": "support-team-1",
             "comments": [
                 {
                     "id": "comment-001",
-                    "authorId": "support-agent-001",
-                    "authorName": "Алексей Поддержка",
-                    "content": "Принял в работу. Проверяю сетевые настройки и доступность Anthropic API.",
-                    "createdAt": "2025-11-29T14:30:00Z"
-                },
-                {
-                    "id": "comment-002",
-                    "authorId": "support-agent-001",
-                    "authorName": "Алексей Поддержка",
-                    "content": "Пользователь использует корпоративный прокси. Нужно добавить исключения для API endpoints.",
-                    "createdAt": "2025-11-29T15:15:00Z",
-                    "isInternal": true
+                    "authorId": "admin-1",
+                    "authorName": "Администратор",
+                    "content": "Проблема воспроизводится. Начинаем диагностику сети.",
+                    "createdAt": "2025-01-15T09:15:00Z"
                 }
             ],
             "tags": [
                 "network",
                 "timeout",
-                "llm",
-                "anthropic"
+                "bug"
             ]
         },
         {
-            "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-            "userId": "user-137",
-            "title": "Ошибка 'Model not found' при выборе GPT-4",
-            "description": "Настроил все параметры для OpenAI, но когда выбираю модель gpt-4, получаю ошибку что модель не найдена. С gpt-3.5-turbo всё работает нормально. API ключ действующий, оплата проведена.",
+            "id": "ticket-003",
+            "userId": "user-789",
+            "title": "Запрос новой функции: экспорт диалогов",
+            "description": "Хотелось бы иметь возможность экспортировать историю диалогов с ассистентом в формате JSON или TXT.",
+            "status": "closed",
+            "createdAt": "2025-01-13T16:45:00Z",
+            "updatedAt": "2025-12-07T13:46:08.691967400Z",
+            "comments": [
+                {
+                    "id": "554d40a0-fa4c-409c-95ac-34b8d915e8a4",
+                    "authorId": "system",
+                    "authorName": "System",
+                    "content": "Статус изменен с 'open' на 'closed': Взято в работу. Плановый релиз - второй квартал 2026 года",
+                    "createdAt": "2025-12-07T13:46:08.691967400Z"
+                }
+            ],
+            "tags": [
+                "feature",
+                "export",
+                "dialogs"
+            ]
+        },
+        {
+            "id": "ticket-004",
+            "userId": "user-321",
+            "title": "Настройки не сохраняются после перезапуска",
+            "description": "После закрытия и повторного открытия приложения все настройки сбрасываются к значениям по умолчанию.",
+            "status": "open",
+            "createdAt": "2025-01-12T11:00:00Z",
+            "updatedAt": "2025-01-12T11:00:00Z",
+            "tags": [
+                "settings",
+                "bug",
+                "persistence"
+            ]
+        },
+        {
+            "id": "ticket-005",
+            "userId": "user-654",
+            "title": "Ошибка при работе с MCP сервером",
+            "description": "При попытке использовать инструменты MCP сервера получаю ошибку 'Connection refused'. Сервер запущен на порту 9001.",
             "status": "resolved",
-            "createdAt": "2025-11-27T09:45:12Z",
-            "updatedAt": "2025-11-27T16:20:00Z",
-            "assignedTo": "support-agent-002",
+            "createdAt": "2025-01-10T08:30:00Z",
+            "updatedAt": "2025-01-11T15:20:00Z",
+            "assignedTo": "support-team-2",
+            "comments": [
+                {
+                    "id": "comment-002",
+                    "authorId": "admin-2",
+                    "authorName": "Техподдержка",
+                    "content": "Проблема была в неправильной конфигурации firewall. Добавили исключение для порта 9001.",
+                    "createdAt": "2025-01-11T15:20:00Z"
+                }
+            ],
+            "tags": [
+                "mcp",
+                "network",
+                "resolved"
+            ]
+        },
+        {
+            "id": "ticket-006",
+            "userId": "user-111",
+            "title": "Медленный ответ от LLM при длинных запросах",
+            "description": "Когда отправляю запрос длиной более 1000 символов, ответ приходит очень медленно (более 30 секунд ожидания).",
+            "status": "in_progress",
+            "createdAt": "2025-01-09T13:15:00Z",
+            "updatedAt": "2025-01-14T10:00:00Z",
+            "assignedTo": "performance-team",
             "comments": [
                 {
                     "id": "comment-003",
-                    "authorId": "support-agent-002",
-                    "authorName": "Мария Поддержка",
-                    "content": "Проблема решена. У пользователя не было доступа к GPT-4 в тарифном плане. Помогли обновить тариф.",
-                    "createdAt": "2025-11-27T16:20:00Z"
+                    "authorId": "dev-1",
+                    "authorName": "Разработчик",
+                    "content": "Начали оптимизацию обработки длинных контекстов. Ожидаем улучшение производительности на 40%.",
+                    "createdAt": "2025-01-14T10:00:00Z",
+                    "isInternal": true
                 }
             ],
-            "tags": [
-                "settings",
-                "model",
-                "openai",
-                "gpt-4"
-            ]
-        },
-        {
-            "id": "d4e5f6a7-b8c9-0123-def1-234567890123",
-            "userId": "user-089",
-            "title": "Приложение зависает при отправке длинного сообщения",
-            "description": "Когда я пытаюсь отправить сообщение длиннее 2000 символов, приложение полностью зависает и не реагирует на действия. Приходится принудительно закрывать. На коротких сообщениях всё работает отлично.",
-            "status": "open",
-            "createdAt": "2025-11-30T16:33:21Z",
-            "updatedAt": "2025-11-30T16:33:21Z",
             "tags": [
                 "performance",
-                "ui",
-                "freeze",
-                "long-message"
-            ]
-        },
-        {
-            "id": "e5f6a7b8-c9d0-1234-ef12-345678901234",
-            "userId": "user-215",
-            "title": "Неправильный формат baseUrl блокирует настройки",
-            "description": "Случайно ввел baseUrl без 'https://' в начале. Теперь не могу сохранить настройки - приложение постоянно выдает ошибку валидации, но не показывает где именно проблема. Интерфейс настроек не дает изменить URL обратно.",
-            "status": "in_progress",
-            "createdAt": "2025-11-29T11:07:55Z",
-            "updatedAt": "2025-11-29T11:07:55Z",
-            "assignedTo": "support-agent-001",
-            "comments": [
-                {
-                    "id": "comment-004",
-                    "authorId": "support-agent-001",
-                    "authorName": "Алексей Поддержка",
-                    "content": "Известная проблема с UI. Пока можно исправить через редактирование конфигурационного файла.",
-                    "createdAt": "2025-11-29T11:45:00Z"
-                }
-            ],
-            "tags": [
-                "settings",
-                "validation",
-                "baseurl",
-                "ui"
-            ]
-        },
-        {
-            "id": "f6a7b8c9-d0e1-2345-f123-456789012345",
-            "userId": "user-324",
-            "title": "Медленный отклик чата даже на простые вопросы",
-            "description": "Чат отвечает очень медленно, иногда ожидание ответа занимает 30-40 секунд даже на простой вопрос 'Привет'. Использую локальный Ollama с моделью llama-3.1-8b. Сама модель в терминале отвечает быстро.",
-            "status": "open",
-            "createdAt": "2025-12-01T08:19:33Z",
-            "updatedAt": "2025-12-01T08:19:33Z",
-            "tags": [
-                "performance",
-                "slow-response",
-                "ollama",
-                "local"
-            ]
-        },
-        {
-            "id": "a7b8c9d0-e1f2-3456-1234-567890123456",
-            "userId": "user-412",
-            "title": "LLM перестал отвечать после обновления приложения",
-            "description": "После обновления до последней версии приложения LLM вообще не отвечает. Раньше всё работало идеально с теми же настройками. Переустановка не помогла. Все настройки на месте: API_KEY, baseUrl, model - всё правильно. В логах вижу 'Internal Server Error 500'.",
-            "status": "open",
-            "createdAt": "2025-12-02T13:42:07Z",
-            "updatedAt": "2025-12-02T13:42:07Z",
-            "tags": [
-                "bug",
                 "llm",
-                "update",
-                "500-error"
+                "optimization"
             ]
         },
         {
-            "id": "b8c9d0e1-f2a3-4567-2345-678901234567",
-            "userId": "user-508",
-            "title": "Параметр topK не применяется к запросам",
-            "description": "Изменил значение topK с 40 на 10 для получения более детерминированных ответов, но похоже что параметр игнорируется. Ответы остались такими же разнообразными. Пробовал разные значения - результат не меняется. Использую OpenAI GPT-4.",
-            "status": "resolved",
-            "createdAt": "2025-11-26T15:28:44Z",
-            "updatedAt": "2025-11-26T17:45:00Z",
-            "assignedTo": "support-agent-002",
-            "comments": [
-                {
-                    "id": "comment-005",
-                    "authorId": "support-agent-002",
-                    "authorName": "Мария Поддержка",
-                    "content": "OpenAI API не поддерживает параметр topK. Используйте.temperature или.top_p вместо него.",
-                    "createdAt": "2025-11-26T17:45:00Z"
-                }
-            ],
-            "tags": [
-                "settings",
-                "topk",
-                "parameters",
-                "openai"
-            ]
-        },
-        {
-            "id": "4969aa10-1994-4099-ab4a-af83165fc268",
-            "userId": "current_user",
-            "title": "Не работает чат с LLM",
-            "description": "Тест :O",
+            "id": "ticket-007",
+            "userId": "user-222",
+            "title": "Документация устарела",
+            "description": "В документации API описаны методы, которые больше не поддерживаются. Нужно обновить до актуальной версии.",
             "status": "open",
-            "createdAt": "2025-12-04T17:14:40.361995100Z",
-            "updatedAt": "2025-12-04T17:14:40.361995100Z",
+            "createdAt": "2025-01-08T09:00:00Z",
+            "updatedAt": "2025-01-08T09:00:00Z",
             "tags": [
-                "чат",
-                "LLM",
-                "проблема"
-            ]
-        },
-        {
-            "id": "c93bf9fc-4f31-47df-88a5-0f0f642ce542",
-            "userId": "current_user",
-            "title": "Не работает доступ к LLM по API",
-            "description": "Описание....",
-            "status": "in_progress",
-            "createdAt": "2025-12-04T20:26:00.733611400Z",
-            "updatedAt": "2025-12-04T20:29:02.277493200Z",
-            "comments": [
-                {
-                    "id": "f2103a3b-5b62-48d9-bc3a-cf14046c7a2e",
-                    "authorId": "system",
-                    "authorName": "System",
-                    "content": "Статус изменен с 'open' на 'in_progress': Взято в работу. Критические проблемы с сервером",
-                    "createdAt": "2025-12-04T20:29:02.277493200Z"
-                }
-            ],
-            "tags": [
-                "llm",
+                "documentation",
                 "api",
-                "auth"
+                "update"
+            ]
+        },
+        {
+            "id": "ticket-008",
+            "userId": "user-333",
+            "title": "Crash при открытии больших файлов",
+            "description": "Приложение вылетает (crash) при попытке открыть файл размером более 50MB в RAG индексаторе.",
+            "status": "open",
+            "createdAt": "2025-01-07T14:30:00Z",
+            "updatedAt": "2025-01-07T14:30:00Z",
+            "tags": [
+                "crash",
+                "rag",
+                "bug",
+                "memory"
             ]
         }
     ]

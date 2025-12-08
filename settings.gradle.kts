@@ -49,6 +49,7 @@ val targetRoots = listOf(
     "targets",
     // TODO("It's old! Remove after migrate to v2")
     "composeApp",
+    "ticketmanager",
     "instances",
     "shared",
     "rag",
