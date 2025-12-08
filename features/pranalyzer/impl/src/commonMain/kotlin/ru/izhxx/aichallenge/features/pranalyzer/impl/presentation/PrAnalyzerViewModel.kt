@@ -133,7 +133,7 @@ class PrAnalyzerViewModel(
                 intent = intent,
                 emitResult = { result ->
                     // Update state through reducer
-                    _state.value = reducer.reduce(_state.value, result)
+                    _state.value = reducer.invoke(_state.value, result)
                 },
                 emitEffect = { effect ->
                     // Send one-time effect to channel
