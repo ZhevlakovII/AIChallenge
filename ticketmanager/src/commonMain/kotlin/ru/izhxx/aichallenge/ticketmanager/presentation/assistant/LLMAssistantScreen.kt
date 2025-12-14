@@ -109,14 +109,28 @@ fun LLMAssistantScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
-                        text = "- \"Измени статус тикета на 'в работе'\"",
+                        text = "Аналитические запросы (режим 'Аналитика данных'):",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Text(
+                        text = "- \"Какая ошибка чаще всего встречается?\"",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
                     Text(
-                        text = "- \"Добавь комментарий: 'Проблема решена'\"",
+                        text = "- \"Сколько открытых тикетов по каждой проблеме?\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Text(
+                        text = "- \"Какие проблемы требуют внимания?\"",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )

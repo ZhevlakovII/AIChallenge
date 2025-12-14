@@ -85,6 +85,15 @@ class GenerateAnswerUseCaseImpl(
                     }
                 }
             }
+
+            AssistantMode.ANALYTICS -> {
+                // Mode D: Data Analytics - get all tickets for statistical analysis
+                // LLM will analyze aggregated data instead of individual tickets
+                val allTicketsResult = repository.getAllTickets()
+                if (allTicketsResult.isSuccess) {
+                    ticketContext.addAll(allTicketsResult.getOrThrow())
+                }
+            }
         }
 
         // Generate answer with collected context
