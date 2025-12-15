@@ -19,6 +19,8 @@ import ru.izhxx.aichallenge.domain.rag.RerankSettings
 import ru.izhxx.aichallenge.domain.rag.RerankMode
 import ru.izhxx.aichallenge.domain.rag.CutoffMode
 import ru.izhxx.aichallenge.features.rag.domain.IndexRagDocumentsUseCase
+import ru.izhxx.aichallenge.instruments.user.profile.repository.api.UserProfileRepository
+import ru.izhxx.aichallenge.instruments.user.profile.model.UserProfile
 
 /**
  * ViewModel для экрана настроек
@@ -27,6 +29,7 @@ class SettingsViewModel(
     private val providerSettingsStore: ProviderSettingsRepository,
     private val lLMConfigRepository: LLMConfigRepository,
     private val ragSettingsRepository: RagSettingsRepository,
+    private val userProfileRepository: UserProfileRepository,
     private val indexRagDocumentsUseCase: IndexRagDocumentsUseCase? = null
 ) : ViewModel() {
 
@@ -46,7 +49,8 @@ class SettingsViewModel(
                 val providerSettings = providerSettingsStore.getSettings()
                 val lLMConfig = lLMConfigRepository.getSettings()
                 val ragSettings = ragSettingsRepository.getSettings()
-                
+                val userProfile = userProfileRepository.getProfile()
+
                 _state.update { 
                     it.copy(
                         apiKey = providerSettings.apiKey,
@@ -76,6 +80,11 @@ class SettingsViewModel(
                         ragMinRerankScore = ragSettings.rerank.minRerankScore?.toString().orEmpty(),
                         ragQuantileQ = ragSettings.rerank.quantileQ.toString(),
                         ragZScore = ragSettings.rerank.zScore.toString(),
+                        // Персонализация
+                        personalizationEnabled = userProfile.enabled,
+                        userName = userProfile.name.orEmpty(),
+                        userProfession = userProfile.profession.orEmpty(),
+                        userExperienceLevel = userProfile.experienceLevel.orEmpty(),
                         isLoading = false
                     )
                 }
@@ -179,6 +188,23 @@ class SettingsViewModel(
      */
     fun updateEnableMcpToolCalling(enabled: Boolean) {
         _state.update { it.copy(enableMcpToolCalling = enabled) }
+    }
+
+    // ======== Персонализация ========
+    fun updatePersonalizationEnabled(enabled: Boolean) {
+        _state.update { it.copy(personalizationEnabled = enabled) }
+    }
+
+    fun updateUserName(name: String) {
+        _state.update { it.copy(userName = name) }
+    }
+
+    fun updateUserProfession(profession: String) {
+        _state.update { it.copy(userProfession = profession) }
+    }
+
+    fun updateUserExperienceLevel(level: String) {
+        _state.update { it.copy(userExperienceLevel = level) }
     }
 
     // ======== RAG setters ========
@@ -445,6 +471,16 @@ class SettingsViewModel(
                 providerSettingsStore.saveSettings(providerSettings)
                 lLMConfigRepository.saveSettings(lLMConfig)
                 ragSettingsRepository.saveSettings(ragSettings)
+
+                // Сохранение профиля персонализации
+                val userProfile = UserProfile(
+                    name = currentState.userName.ifBlank { null },
+                    profession = currentState.userProfession.ifBlank { null },
+                    experienceLevel = currentState.userExperienceLevel.ifBlank { null },
+                    enabled = currentState.personalizationEnabled
+                )
+                userProfileRepository.updateProfile(userProfile)
+
                 _state.update {
                     it.copy(isLoading = false, isSaved = true)
                 }

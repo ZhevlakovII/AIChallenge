@@ -36,6 +36,7 @@ import ru.izhxx.aichallenge.mcp.data.McpToLlmToolsMapper
 import ru.izhxx.aichallenge.mcp.domain.repository.McpRepository
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpServersUseCase
 import ru.izhxx.aichallenge.mcp.orchestrator.McpRouter
+import ru.izhxx.aichallenge.instruments.user.profile.repository.api.UserProfileRepository
 
 /**
  * Реализация репозитория для работы с LLM клиентом.
@@ -54,7 +55,8 @@ class LLMClientRepositoryImpl(
     private val toolsMapper: McpToLlmToolsMapper,
     private val json: Json,
     private val mcpRouter: McpRouter,
-    private val getMcpServers: GetMcpServersUseCase
+    private val getMcpServers: GetMcpServersUseCase,
+    private val userProfileRepository: UserProfileRepository
 ) : LLMClientRepository {
 
     // Создаем логгер
@@ -68,25 +70,38 @@ class LLMClientRepositoryImpl(
     }
 
     /**
-     * Получает эффективный системный промпт с учетом настроек и суммаризации
+     * Получает эффективный системный промпт с учетом настроек, персонализации и суммаризации
      */
     private suspend fun getEffectiveSystemPrompt(summary: String?): LLMMessage {
         val promptSettings = llmConfigRepository.getSettings()
+        val userProfile = userProfileRepository.getProfile()
 
         val basePrompt = """
             ${promptSettings.systemPrompt}
             ${FormatSystemPrompts.getFormatPrompt(promptSettings.responseFormat)}
         """.trimIndent()
 
-        // Если есть суммаризация, добавляем её к системному промпту
-        val finalPrompt = if (summary != null) {
+        // Добавляем персонализацию ПЕРЕД базовым промптом (если включена)
+        val personalizationText = userProfile.toPromptText()
+        val promptWithPersonalization = if (personalizationText != null) {
             """
+            $personalizationText
+
             $basePrompt
-            
-            $summary
             """.trimIndent()
         } else {
             basePrompt
+        }
+
+        // Если есть суммаризация, добавляем её в конец
+        val finalPrompt = if (summary != null) {
+            """
+            $promptWithPersonalization
+
+            $summary
+            """.trimIndent()
+        } else {
+            promptWithPersonalization
         }
 
         return LLMMessage(

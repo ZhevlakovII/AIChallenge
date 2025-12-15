@@ -17,6 +17,7 @@ val settingsModule = module {
             providerSettingsStore = get(),
             lLMConfigRepository = get(),
             ragSettingsRepository = get(),
+            userProfileRepository = get(),
             indexRagDocumentsUseCase = getOrNull() // Optional: only on JVM
         )
     }

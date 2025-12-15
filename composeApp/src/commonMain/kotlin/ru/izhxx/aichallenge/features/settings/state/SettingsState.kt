@@ -29,6 +29,12 @@ data class SettingsState(
     // Фича-флаг: включить function calling (MCP tools)
     val enableMcpToolCalling: Boolean = false,
 
+    // ===== Персонализация =====
+    val personalizationEnabled: Boolean = false,
+    val userName: String = "",
+    val userProfession: String = "",
+    val userExperienceLevel: String = "",
+
     // ===== RAG настройки =====
     val ragEnabled: Boolean = false,
     val ragIndexPath: String = "",

@@ -59,6 +59,10 @@ kotlin {
             implementation(projects.shared.sharedold)
             implementation(projects.rag.docIndexer.core)
             implementation(projects.rag.docIndexer.ollama)
+
+            implementation(projects.instruments.user.profile.model)
+            implementation(projects.instruments.user.profile.repository.api)
+            implementation(projects.instruments.user.profile.repository.impl)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
