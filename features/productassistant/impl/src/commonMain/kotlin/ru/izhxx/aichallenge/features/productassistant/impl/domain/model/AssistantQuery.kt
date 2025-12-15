@@ -26,13 +26,19 @@ enum class AssistantMode {
     /**
      * Mode C: Full mode (FAQ + MCP combined)
      */
-    FULL;
+    FULL,
+
+    /**
+     * Mode D: Data Analytics mode - analyze ticket data, statistics, trends
+     */
+    ANALYTICS;
 
     fun toDisplayString(): String {
         return when (this) {
             FAQ_ONLY -> "Режим FAQ"
             TICKET_ANALYSIS -> "Анализ тикетов"
             FULL -> "Полный режим"
+            ANALYTICS -> "Аналитика данных"
         }
     }
 }

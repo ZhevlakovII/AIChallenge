@@ -212,6 +212,20 @@ class ProductAssistantRepositoryImpl(
                 5. Если проблема встречается часто (много тикетов), упомяни это
                 6. Отвечай на русском языке, четко структурируй информацию
             """.trimIndent()
+
+            AssistantMode.ANALYTICS -> """
+                Ты - Data Analyst для системы поддержки AI Challenge. Твоя задача - анализировать данные тикетов поддержки и предоставлять статистическую информацию и инсайты.
+
+                Инструкции:
+                1. Анализируй предоставленные данные тикетов и статистику
+                2. Выявляй тренды, паттерны и аномалии в данных
+                3. Отвечай на аналитические вопросы: "какая ошибка чаще всего?", "где больше всего проблем?", "какие тренды?"
+                4. Предоставляй конкретные числа и проценты
+                5. Делай выводы и давай рекомендации на основе данных
+                6. Структурируй ответ: краткое резюме, затем детальная статистика, затем рекомендации
+                7. Отвечай на русском языке, используй таблицы и списки для наглядности
+                8. Если данных недостаточно для анализа, укажи это
+            """.trimIndent()
         }
     }
 
@@ -235,13 +249,78 @@ class ProductAssistantRepositoryImpl(
         }
 
         if (ticketContext.isNotEmpty()) {
-            prompt.appendLine("=== Релевантные тикеты поддержки ===")
-            ticketContext.forEachIndexed { index, ticket ->
-                prompt.appendLine("${index + 1}. Тикет #${ticket.id.take(8)} [${ticket.status.toDisplayString()}]")
-                prompt.appendLine("   Заголовок: ${ticket.title}")
-                prompt.appendLine("   Описание: ${ticket.description}")
-                prompt.appendLine("   Теги: ${ticket.tags.joinToString(", ")}")
+            if (query.mode == AssistantMode.ANALYTICS) {
+                // Analytics mode: provide aggregated statistics
+                prompt.appendLine("=== Статистика по тикетам поддержки ===")
                 prompt.appendLine()
+
+                // Total count
+                prompt.appendLine("Всего тикетов: ${ticketContext.size}")
+                prompt.appendLine()
+
+                // Status distribution
+                val statusDistribution = ticketContext.groupBy { it.status }
+                prompt.appendLine("Распределение по статусам:")
+                TicketStatus.entries.forEach { status ->
+                    val count = statusDistribution[status]?.size ?: 0
+                    val percentage = if (ticketContext.isNotEmpty()) (count.toDouble() / ticketContext.size * 100).toInt() else 0
+                    prompt.appendLine("  - ${status.toDisplayString()}: $count ($percentage%)")
+                }
+                prompt.appendLine()
+
+                // Tag distribution
+                val tagDistribution = ticketContext
+                    .flatMap { it.tags }
+                    .groupBy { it }
+                    .mapValues { it.value.size }
+                    .toList()
+                    .sortedByDescending { it.second }
+
+                if (tagDistribution.isNotEmpty()) {
+                    prompt.appendLine("Топ-10 проблем по тегам:")
+                    tagDistribution.take(10).forEachIndexed { index, (tag, count) ->
+                        val percentage = (count.toDouble() / ticketContext.size * 100).toInt()
+                        val openCount = ticketContext.count { tag in it.tags && it.status == TicketStatus.OPEN }
+                        prompt.appendLine("  ${index + 1}. $tag: $count тикетов ($percentage%), открыто: $openCount")
+                    }
+                    prompt.appendLine()
+                }
+
+                // Examples of tickets for each top issue
+                prompt.appendLine("Примеры тикетов по основным проблемам:")
+                tagDistribution.take(5).forEach { (tag, _) ->
+                    val exampleTickets = ticketContext.filter { tag in it.tags }.take(2)
+                    if (exampleTickets.isNotEmpty()) {
+                        prompt.appendLine("  Проблема '$tag':")
+                        exampleTickets.forEach { ticket ->
+                            prompt.appendLine("    - [${ticket.status.toDisplayString()}] ${ticket.title}")
+                        }
+                    }
+                }
+                prompt.appendLine()
+
+                // Resolution time for resolved tickets
+                val resolvedTickets = ticketContext.filter {
+                    it.status == TicketStatus.RESOLVED || it.status == TicketStatus.CLOSED
+                }
+                if (resolvedTickets.isNotEmpty()) {
+                    val avgHours = resolvedTickets.map {
+                        (it.updatedAt - it.createdAt).inWholeHours
+                    }.average()
+                    prompt.appendLine("Среднее время решения: ${avgHours.toInt()} часов (${(avgHours / 24).toInt()} дней)")
+                    prompt.appendLine()
+                }
+
+            } else {
+                // Regular mode: provide ticket list
+                prompt.appendLine("=== Релевантные тикеты поддержки ===")
+                ticketContext.forEachIndexed { index, ticket ->
+                    prompt.appendLine("${index + 1}. Тикет #${ticket.id.take(8)} [${ticket.status.toDisplayString()}]")
+                    prompt.appendLine("   Заголовок: ${ticket.title}")
+                    prompt.appendLine("   Описание: ${ticket.description}")
+                    prompt.appendLine("   Теги: ${ticket.tags.joinToString(", ")}")
+                    prompt.appendLine()
+                }
             }
         }
 

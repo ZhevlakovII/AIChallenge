@@ -13,6 +13,8 @@ import ru.izhxx.aichallenge.features.productassistant.impl.data.datasource.Ticke
 import ru.izhxx.aichallenge.features.productassistant.impl.data.datasource.TicketMcpDataSourceImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.data.repository.ProductAssistantRepositoryImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.repository.ProductAssistantRepository
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.AnalyzeTicketsDataUseCase
+import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.AnalyzeTicketsDataUseCaseImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.CreateTicketUseCase
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.CreateTicketUseCaseImpl
 import ru.izhxx.aichallenge.features.productassistant.impl.domain.usecase.GenerateAnswerUseCase
@@ -52,6 +54,7 @@ val productAssistantModule = module {
     factoryOf(::GenerateAnswerUseCaseImpl) bind GenerateAnswerUseCase::class
     factoryOf(::CreateTicketUseCaseImpl) bind CreateTicketUseCase::class
     factoryOf(::UpdateTicketUseCaseImpl) bind UpdateTicketUseCase::class
+    factoryOf(::AnalyzeTicketsDataUseCaseImpl) bind AnalyzeTicketsDataUseCase::class
 
     // Presentation Layer - Mapper
     singleOf(::ProductAssistantUiMapper)
