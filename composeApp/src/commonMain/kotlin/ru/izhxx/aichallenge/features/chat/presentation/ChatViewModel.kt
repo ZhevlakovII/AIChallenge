@@ -1,12 +1,17 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package ru.izhxx.aichallenge.features.chat.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,19 +26,23 @@ import ru.izhxx.aichallenge.domain.repository.LLMConfigRepository
 import ru.izhxx.aichallenge.domain.repository.MetricsCacheRepository
 import ru.izhxx.aichallenge.domain.usecase.CompressDialogHistoryUseCase
 import ru.izhxx.aichallenge.features.chat.domain.usecase.CheckApiKeyConfigurationUseCase
+import ru.izhxx.aichallenge.features.chat.domain.usecase.CompareMessageUseCase
 import ru.izhxx.aichallenge.features.chat.domain.usecase.SendMessageUseCase
 import ru.izhxx.aichallenge.features.chat.presentation.mapper.ChatResponseMapper
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatEvent
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiMessage
 import ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiState
 import ru.izhxx.aichallenge.features.chat.presentation.model.MessageContent
-import java.util.UUID
+import ru.izhxx.aichallenge.instruments.speech.recognition.api.domain.model.SpeechRecognitionError
+import ru.izhxx.aichallenge.instruments.speech.recognition.api.domain.model.SpeechRecognitionResult
+import ru.izhxx.aichallenge.instruments.speech.recognition.api.domain.usecase.RecognizeSpeechUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.EnsureMcpConnectedUseCase
-import ru.izhxx.aichallenge.mcp.domain.usecase.GetSavedMcpUrlUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetGithubUserReposUseCase
-import ru.izhxx.aichallenge.mcp.domain.usecase.GetMyGithubReposUseCase
 import ru.izhxx.aichallenge.mcp.domain.usecase.GetMcpToolsUseCase
-import ru.izhxx.aichallenge.features.chat.domain.usecase.CompareMessageUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetMyGithubReposUseCase
+import ru.izhxx.aichallenge.mcp.domain.usecase.GetSavedMcpUrlUseCase
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * ViewModel для экрана чата с использованием паттерна MVI
@@ -52,7 +61,9 @@ class ChatViewModel(
     private val getGithubUserReposUseCase: GetGithubUserReposUseCase,
     private val getMyGithubReposUseCase: GetMyGithubReposUseCase,
     private val getMcpToolsUseCase: GetMcpToolsUseCase,
-    private val compareMessageUseCase: CompareMessageUseCase
+    private val compareMessageUseCase: CompareMessageUseCase,
+    // Voice recognition
+    private val recognizeSpeechUseCase: RecognizeSpeechUseCase
 ) : ViewModel() {
 
     // Для логирования
@@ -66,6 +77,9 @@ class ChatViewModel(
     
     // Счетчик сообщений в истории для текущего диалога
     private var currentMessageCounter = 0
+
+    // Job для отслеживания распознавания речи
+    private var recognitionJob: Job? = null
 
     // Состояние UI
     private val _state = MutableStateFlow(ChatUiState())
@@ -95,6 +109,10 @@ class ChatViewModel(
 
             // Проверяем наличие API ключа
             refreshApiKeyConfiguration()
+
+            // Проверяем разрешение на запись аудио
+            val hasPermission = recognizeSpeechUseCase.hasPermission()
+            _state.update { it.copy(hasRecordPermission = hasPermission) }
         }
     }
 
@@ -141,11 +159,11 @@ class ChatViewModel(
                             MessageRole.USER -> responseMapper.createUserUiMessage(
                                 message.content,
                                 false, // нет ошибок для восстановленных сообщений
-                                UUID.randomUUID().toString()
+                                Uuid.random().toString()
                             )
 
                             MessageRole.ASSISTANT -> ChatUiMessage.AssistantMessage(
-                                id = UUID.randomUUID().toString(),
+                                id = Uuid.random().toString(),
                                 content = MessageContent.Plain(message.content),
                                 metadata = null // у восстановленных сообщений нет метаданных
                             )
@@ -171,7 +189,7 @@ class ChatViewModel(
         } catch (e: Exception) {
             // В случае ошибки создаем новый диалог и продолжаем работу
             logger.e("Ошибка при инициализации диалога", e)
-            currentDialogId = UUID.randomUUID().toString()
+            currentDialogId = Uuid.random().toString()
         }
     }
 
@@ -227,6 +245,10 @@ class ChatViewModel(
                 is ChatEvent.RetryLastMessage -> handleRetryLastMessage()
                 is ChatEvent.ClearHistory -> handleClearHistory()
                 is ChatEvent.UpdateInputText -> handleUpdateInputText(event.text)
+                is ChatEvent.StartVoiceRecording -> handleStartVoiceRecording()
+                is ChatEvent.StopVoiceRecording -> handleStopVoiceRecording()
+                is ChatEvent.CancelVoiceRecording -> handleCancelVoiceRecording()
+                is ChatEvent.UpdatePermissionStatus -> handleUpdatePermissionStatus(event.isGranted)
             }
         }
     }
@@ -284,7 +306,7 @@ class ChatViewModel(
         }
 
         // Создаём ID для пары запрос-ответ
-        val requestId = UUID.randomUUID().toString()
+        val requestId = Uuid.random().toString()
 
         // Добавляем сообщение пользователя в UI
         val userUiMessage =
@@ -630,9 +652,9 @@ class ChatViewModel(
                             appendLine(if (cmp.filteredUsedChunks.isEmpty()) "Вывод: RAG не помог (релевантный контекст не найден)." else "Вывод: RAG использовал внешний контекст — ответ может быть точнее по данным из базы.")
                         }
                         addUiMessage(
-                            ru.izhxx.aichallenge.features.chat.presentation.model.ChatUiMessage.AssistantMessage(
-                                id = java.util.UUID.randomUUID().toString(),
-                                content = ru.izhxx.aichallenge.features.chat.presentation.model.MessageContent.Plain(summaryText),
+                            ChatUiMessage.AssistantMessage(
+                                id = Uuid.random().toString(),
+                                content = MessageContent.Plain(summaryText),
                                 metadata = null
                             )
                         )
@@ -706,7 +728,7 @@ class ChatViewModel(
                             val textOut = buildReposPlainList(repos, header = "Публичные репозитории $username:")
                             addUiMessage(
                                 ChatUiMessage.AssistantMessage(
-                                    id = UUID.randomUUID().toString(),
+                                    id = Uuid.random().toString(),
                                     content = MessageContent.Plain(textOut),
                                     metadata = null
                                 )
@@ -729,7 +751,7 @@ class ChatViewModel(
                             val textOut = buildReposPlainList(repos, header = "Мои репозитории:")
                             addUiMessage(
                                 ChatUiMessage.AssistantMessage(
-                                    id = UUID.randomUUID().toString(),
+                                    id = Uuid.random().toString(),
                                     content = MessageContent.Plain(textOut),
                                     metadata = null
                                 )
@@ -764,7 +786,7 @@ class ChatViewModel(
                             }
                             addUiMessage(
                                 ChatUiMessage.AssistantMessage(
-                                    id = UUID.randomUUID().toString(),
+                                    id = Uuid.random().toString(),
                                     content = MessageContent.Plain(listText),
                                     metadata = null
                                 )
@@ -836,7 +858,7 @@ class ChatViewModel(
 
             if (lastUserMessageIndex != -1) {
                 val lastUserMessage = messageHistory.value[lastUserMessageIndex]
-                val requestId = UUID.randomUUID().toString()
+                val requestId = Uuid.random().toString()
 
                 // Удаляем все сообщения после последнего сообщения пользователя
                 if (lastUserMessageIndex < messageHistory.value.size - 1) {
@@ -889,7 +911,7 @@ class ChatViewModel(
                 currentDialogId = dialogPersistenceRepository.createNewDialog()
             } catch (e: Exception) {
                 logger.e("Ошибка при создании нового диалога", e)
-                currentDialogId = UUID.randomUUID().toString()
+                currentDialogId = Uuid.random().toString()
             }
 
             // Создаем приветственное сообщение
@@ -919,5 +941,140 @@ class ChatViewModel(
         _state.update {
             it.copy(messages = it.messages + message)
         }
+    }
+
+    /**
+     * Начинает запись голоса и распознавание речи
+     */
+    private fun handleStartVoiceRecording() {
+        logger.d("handleStartVoiceRecording")
+
+        // Отменяем предыдущую запись, если была
+        recognitionJob?.cancel()
+
+        // Обновляем состояние
+        _state.update { it.copy(isRecording = true, recognizedText = "") }
+
+        // Запускаем распознавание речи
+        recognitionJob = viewModelScope.launch {
+            recognizeSpeechUseCase.startRecognition("ru-RU")
+                .catch { e ->
+                    logger.e("Voice recognition flow error", e)
+                    _state.update {
+                        it.copy(
+                            isRecording = false,
+                            recognizedText = ""
+                        )
+                    }
+                    val errorMessage = responseMapper.createTechnicalUiMessage(
+                        "Ошибка распознавания речи: ${e.message}"
+                    )
+                    addUiMessage(errorMessage)
+                }
+                .collect { result ->
+                    logger.d("Voice recognition result: $result")
+                    when (result) {
+                        is SpeechRecognitionResult.ReadyForSpeech -> {
+                            logger.d("Ready for speech")
+                        }
+
+                        is SpeechRecognitionResult.Listening -> {
+                            logger.d("Listening...")
+                        }
+
+                        is SpeechRecognitionResult.PartialResult -> {
+                            logger.d("Partial result: ${result.text}")
+                            _state.update { it.copy(recognizedText = result.text) }
+                        }
+
+                        is SpeechRecognitionResult.Success -> {
+                            logger.d("Recognition success: ${result.text}")
+                            _state.update {
+                                it.copy(
+                                    isRecording = false,
+                                    recognizedText = "",
+                                    inputText = result.text
+                                )
+                            }
+                            // Автоматически отправляем распознанный текст
+                            handleSendMessage(result.text)
+                        }
+
+                        is SpeechRecognitionResult.Error -> {
+                            logger.e("Recognition error: ${result.error}")
+                            handleVoiceRecognitionError(result.error)
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
+     * Останавливает запись голоса
+     */
+    private suspend fun handleStopVoiceRecording() {
+        logger.d("handleStopVoiceRecording")
+        // Останавливаем распознавание, но НЕ отменяем Job
+        // Это позволит получить финальные результаты из SpeechRecognizer
+        recognizeSpeechUseCase.stopRecognition()
+        // Обновляем UI состояние, но оставляем Job активным для получения результатов
+        _state.update { it.copy(isRecording = false) }
+    }
+
+    /**
+     * Отменяет запись голоса
+     */
+    private suspend fun handleCancelVoiceRecording() {
+        logger.d("handleCancelVoiceRecording")
+        // При отмене принудительно останавливаем и отменяем Job
+        recognitionJob?.cancel()
+        recognizeSpeechUseCase.stopRecognition()
+        _state.update { it.copy(isRecording = false, recognizedText = "") }
+    }
+
+    /**
+     * Обрабатывает ошибки распознавания речи
+     */
+    private fun handleVoiceRecognitionError(error: SpeechRecognitionError) {
+        _state.update { it.copy(isRecording = false, recognizedText = "") }
+
+        val errorMessage = when (error) {
+            is SpeechRecognitionError.NoPermission -> {
+                "Нет разрешения RECORD_AUDIO. Пожалуйста, предоставьте разрешение в настройках."
+            }
+
+            is SpeechRecognitionError.NetworkError -> {
+                "Ошибка сети. Проверьте подключение к Интернету."
+            }
+
+            is SpeechRecognitionError.NoSpeechDetected -> {
+                "Речь не обнаружена. Попробуйте еще раз."
+            }
+
+            is SpeechRecognitionError.ServerError -> {
+                "Ошибка сервера распознавания. Попробуйте позже."
+            }
+
+            is SpeechRecognitionError.RecognizerNotAvailable -> {
+                "Голосовой ввод недоступен на этом устройстве."
+            }
+
+            is SpeechRecognitionError.UnknownError -> {
+                "Неизвестная ошибка: ${error.message}"
+            }
+        }
+
+        val uiMessage = responseMapper.createTechnicalUiMessage(errorMessage)
+        addUiMessage(uiMessage)
+
+        logger.e("Voice recognition error: $errorMessage")
+    }
+
+    /**
+     * Обновляет статус разрешения на запись аудио
+     */
+    private fun handleUpdatePermissionStatus(isGranted: Boolean) {
+        logger.d("Permission status updated: $isGranted")
+        _state.update { it.copy(hasRecordPermission = isGranted) }
     }
 }

@@ -10,5 +10,9 @@ data class ChatUiState(
     val inputText: String = "",
     val isLoading: Boolean = false,
     val error: DomainException? = null,
-    val apiKeyConfigured: Boolean = false
+    val apiKeyConfigured: Boolean = false,
+    // Voice recording state
+    val isRecording: Boolean = false,
+    val recognizedText: String = "",
+    val hasRecordPermission: Boolean = false
 )
