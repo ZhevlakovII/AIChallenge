@@ -2,7 +2,7 @@ import ru.izhxx.aichallenge.logic.commonDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
 }
 
 android {
@@ -12,12 +12,13 @@ android {
 kotlin {
     commonDependencies {
         implementation(projects.core.network.api)
-        implementation(projects.core.foundation)
+        implementation(projects.core.buildmode)
+        implementation(projects.core.logger)
 
         implementation(libs.koin.core)
 
-        implementation(libs.ktor.clientCore)
-        implementation(libs.ktor.clientLogging)
+        implementation(libs.ktor.client.core)
+        implementation(libs.ktor.client.logging)
 
         implementation(libs.kotlinx.serialization.json)
     }

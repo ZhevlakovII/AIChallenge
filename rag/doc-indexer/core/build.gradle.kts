@@ -5,7 +5,7 @@ import ru.izhxx.aichallenge.logic.configurator.config
 import ru.izhxx.aichallenge.logic.jvmDependencies
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -16,7 +16,7 @@ android {
 
 kotlin {
     commonDependencies {
-        implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.kotlinx.coroutines.core)
         implementation(libs.kotlinx.serialization.json)
         implementation(libs.kotlinx.datetime)
     }
@@ -25,6 +25,6 @@ kotlin {
     }
     commonTestDependencies {
         implementation(libs.kotlin.test)
-        implementation(libs.kotlinx.coroutinesTest)
+        implementation(libs.kotlinx.coroutines.test)
     }
 }

@@ -2,7 +2,7 @@ import ru.izhxx.aichallenge.logic.commonDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
 }
 
 android {
@@ -11,6 +11,6 @@ android {
 
 kotlin {
     commonDependencies {
-        implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.kotlinx.coroutines.core)
     }
 }

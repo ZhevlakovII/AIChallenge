@@ -2,7 +2,7 @@ import ru.izhxx.aichallenge.logic.commonDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
     id("room")
 }
 
@@ -17,7 +17,7 @@ kotlin {
         implementation(projects.instruments.user.profile.model)
 
         // Libraries
-        implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.kotlinx.coroutines.core)
         implementation(libs.koin.core)
     }
 }

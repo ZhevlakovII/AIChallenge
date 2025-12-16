@@ -6,7 +6,7 @@ enum class McpToolType(val key: String) {
 
     companion object {
         fun parseType(statusString: String): McpToolType {
-            return entries.first { status -> statusString.lowercase() == status.key.lowercase() }
+            return entries.first { status -> statusString.equals(status.key, ignoreCase = true) }
         }
     }
 }

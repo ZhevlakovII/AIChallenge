@@ -28,30 +28,30 @@ kotlin {
 
     sourceSets {
         jvmMain.dependencies {
-            implementation(libs.ktor.clientCio)
-            implementation(libs.kotlinx.coroutinesSwing)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.androidx.datastore.preferences)
         }
 
         androidMain.dependencies {
             implementation(libs.androidx.core.ktx)
-            implementation(libs.ktor.clientOkhttp)
+            implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.datastore.preferences)
         }
 
         commonMain.dependencies {
             // Ktor Client
-            implementation(libs.ktor.clientCore)
-            implementation(libs.ktor.clientContentNegotiation)
-            implementation(libs.ktor.clientLogging)
-            implementation(libs.ktor.serializationKotlinxJson)
-            implementation(libs.ktor.clientWebsockets)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.logging)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.websockets)
 
             // Kotlinx Serialization
             implementation(libs.kotlinx.serialization.json)
 
             // Coroutines
-            implementation(libs.kotlinx.coroutinesCore)
+            implementation(libs.kotlinx.coroutines.core)
             
             // Koin
             implementation(libs.koin.core)
@@ -73,20 +73,20 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-            implementation(libs.kotlinx.coroutinesTest)
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
 
 android {
     namespace = "ru.izhxx.aichallenge.shared"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = 36
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
     defaultConfig {
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        minSdk = 24
     }
 }
 

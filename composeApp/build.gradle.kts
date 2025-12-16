@@ -48,8 +48,8 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.compose.icons.material)
             implementation(libs.koin.core)
@@ -71,19 +71,19 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.koin.core)
             implementation(projects.rag.docIndexer.fsJvm)
-            implementation(libs.ktor.clientCore)
+            implementation(libs.ktor.client.core)
         }
     }
 }
 
 android {
     namespace = "ru.izhxx.aichallenge"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "ru.izhxx.aichallenge"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk = 24
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }

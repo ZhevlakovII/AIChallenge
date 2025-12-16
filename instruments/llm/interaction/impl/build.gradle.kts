@@ -5,7 +5,7 @@ import ru.izhxx.aichallenge.logic.iosDependencies
 import ru.izhxx.aichallenge.logic.jvmDependencies
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -24,21 +24,21 @@ kotlin {
         implementation(projects.instruments.llm.config.provider.model)
 
         // Libraries
-        implementation(libs.kotlinx.coroutinesCore)
-        implementation(libs.ktor.clientCore)
-        implementation(libs.ktor.clientContentNegotiation)
-        implementation(libs.ktor.serializationKotlinxJson)
+        implementation(libs.kotlinx.coroutines.core)
+        implementation(libs.ktor.client.core)
+        implementation(libs.ktor.client.content.negotiation)
+        implementation(libs.ktor.serialization.kotlinx.json)
         implementation(libs.koin.core)
         implementation(libs.kotlinx.serialization.json)
     }
 
     androidDependencies {
-        implementation(libs.ktor.clientOkhttp)
+        implementation(libs.ktor.client.okhttp)
     }
     jvmDependencies {
-        implementation(libs.ktor.clientCio)
+        implementation(libs.ktor.client.cio)
     }
     iosDependencies {
-        implementation(libs.ktor.clientDarwin)
+        implementation(libs.ktor.client.darwin)
     }
 }

@@ -2,7 +2,7 @@ import ru.izhxx.aichallenge.logic.commonDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.hot.reload)
@@ -25,7 +25,7 @@ kotlin {
         implementation(libs.koin.compose.viewmodel)
 
         // Coroutines
-        implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.kotlinx.coroutines.core)
 
         // Serialization
         implementation(libs.kotlinx.serialization.json)
@@ -42,7 +42,7 @@ kotlin {
         implementation(compose.components.uiToolingPreview)
 
         // AndroidX
-        implementation(libs.androidx.lifecycle.viewmodelCompose)
-        implementation(libs.androidx.lifecycle.runtimeCompose)
+        implementation(libs.androidx.lifecycle.viewmodel.compose)
+        implementation(libs.androidx.lifecycle.runtime.compose)
     }
 }
