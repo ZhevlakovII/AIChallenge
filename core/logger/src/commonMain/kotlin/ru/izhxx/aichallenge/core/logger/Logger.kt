@@ -25,7 +25,7 @@ import kotlin.contracts.contract
  *
  * Замечания:
  * - В debug‑сборках разрешены все уровни кроме [LogLevel.NONE]; в release — только [LogLevel.WARN] и [LogLevel.ERROR].
- * - Избегайте PII: персональные данные, токены и т. п.
+ * - Избегайте PII: персональные данные, токены и т.п.
  */
 inline fun log(
     level: LogLevel,

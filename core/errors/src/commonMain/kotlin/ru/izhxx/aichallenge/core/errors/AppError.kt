@@ -14,7 +14,6 @@ package ru.izhxx.aichallenge.core.errors
  * @see MetadataKey
  * @see Throwable
  */
-// TODO(Дополнить документацию по ошибкам)
 sealed class AppError(
     val severity: ErrorSeverity,
     val retry: ErrorRetry,
@@ -22,6 +21,7 @@ sealed class AppError(
     val rawMessage: String? = cause?.message,
     val metadata: Map<MetadataKey, String> = emptyMap()
 ) {
+    // TODO(Дополнить документацию по типам ошибкам)
     /* Дальше идут конкретные типы ошибок */
 
     /* Ошибки сетевого уровня */
