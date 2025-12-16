@@ -43,10 +43,11 @@ plugins {
 val targetRoots = listOf(
     "core",
     "designsystem",
-    "instruments",
+    "tools",
     "features",
-    "app",
     "targets",
+    // TODO("It's old. Remove after migrate to v3")
+    "instruments",
     // TODO("It's old! Remove after migrate to v2")
     "composeApp",
     "ticketmanager",
