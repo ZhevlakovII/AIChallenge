@@ -16,23 +16,23 @@ application {
 
 dependencies {
     implementation(projects.shared.sharedold)
-    implementation(libs.logback)
+    implementation(libs.logback.classic)
 
     // Ktor Server
-    implementation(libs.ktor.serverCore)
-    implementation(libs.ktor.serverNetty)
-    implementation(libs.ktor.serverWebsockets)
+    implementation(libs.ktor.server.core.jvm)
+    implementation(libs.ktor.server.netty.jvm)
+    implementation(libs.ktor.server.websockets)
 
     // JSON
     implementation(libs.kotlinx.serialization.json)
 
     // Ktor Client (для вызовов внешних API, если нужно)
-    implementation(libs.ktor.clientCore)
-    implementation(libs.ktor.clientCio)
-    implementation(libs.ktor.clientContentNegotiation)
-    implementation(libs.ktor.serializationKotlinxJson)
-    implementation(libs.ktor.clientLogging)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.logging)
 
-    testImplementation(libs.ktor.serverTestHost)
-    testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.ktor.server.test.host.jvm)
+    testImplementation(libs.kotlin.test.junit)
 }

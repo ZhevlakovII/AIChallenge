@@ -1,12 +1,12 @@
 package ru.izhxx.aichallenge.features.productassistant.api
 
-import ru.izhxx.aichallenge.core.ui.navigation.DestinationRoute
+import ru.izhxx.aichallenge.core.ui.navigation.NavigationIntent
 
 /**
  * Navigation route for Product Assistant feature
  */
-object ProductAssistantDestinationRoute : DestinationRoute {
+object ProductAssistantDestinationRoute : NavigationIntent {
     const val ROUTE = "product_assistant"
 
-    override fun invoke(): String = ROUTE
+    fun invoke(): String = ROUTE
 }

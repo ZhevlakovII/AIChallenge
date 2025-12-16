@@ -59,8 +59,8 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
 
             // Lifecycle
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
 
             // Navigation
             implementation(libs.androidx.navigation.compose)
@@ -75,7 +75,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
 
             // Coroutines
-            implementation(libs.kotlinx.coroutinesCore)
+            implementation(libs.kotlinx.coroutines.core)
 
             // Serialization
             implementation(libs.kotlinx.serialization.json)
@@ -86,19 +86,19 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.koin.core)
-            implementation(libs.ktor.clientCore)
+            implementation(libs.ktor.client.core)
         }
     }
 }
 
 android {
     namespace = "ru.izhxx.aichallenge.ticketmanager"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "ru.izhxx.aichallenge.ticketmanager"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk = 24
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }

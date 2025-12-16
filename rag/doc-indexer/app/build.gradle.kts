@@ -11,14 +11,14 @@ dependencies {
     implementation(projects.rag.docIndexer.ollama)
     implementation(projects.rag.docIndexer.fsJvm)
 
-    implementation(libs.kotlinx.coroutinesCore)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.ktor.clientCore)
-    implementation(libs.ktor.clientCio)
-    implementation(libs.ktor.clientContentNegotiation)
-    implementation(libs.ktor.serializationKotlinxJson)
-    implementation(libs.ktor.clientLogging)
-    implementation(libs.logback)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.logging)
+    implementation(libs.logback.classic)
 }
 
 application {

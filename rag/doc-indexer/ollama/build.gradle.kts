@@ -3,7 +3,7 @@ import ru.izhxx.aichallenge.logic.configurator.config
 import ru.izhxx.aichallenge.logic.jvmDependencies
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -15,14 +15,14 @@ android {
 kotlin {
     commonDependencies {
         implementation(project(":rag:doc-indexer:core"))
-        implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.kotlinx.coroutines.core)
         implementation(libs.kotlinx.serialization.json)
-        implementation(libs.ktor.clientCore)
-        implementation(libs.ktor.clientContentNegotiation)
-        implementation(libs.ktor.serializationKotlinxJson)
+        implementation(libs.ktor.client.core)
+        implementation(libs.ktor.client.content.negotiation)
+        implementation(libs.ktor.serialization.kotlinx.json)
     }
     jvmDependencies {
-        implementation(libs.ktor.clientCio)
-        implementation(libs.ktor.clientLogging)
+        implementation(libs.ktor.client.cio)
+        implementation(libs.ktor.client.logging)
     }
 }

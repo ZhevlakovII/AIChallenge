@@ -7,6 +7,7 @@ import ru.izhxx.aichallenge.features.pranalyzer.impl.di.prAnalyzerModule
 import ru.izhxx.aichallenge.features.productassistant.impl.di.productAssistantModule
 import ru.izhxx.aichallenge.features.reminder.di.reminderModule
 import ru.izhxx.aichallenge.features.settings.di.settingsModule
+import ru.izhxx.aichallenge.instruments.user.profile.repository.impl.di.userProfileModule
 
 /**
  * Основной модуль приложения, объединяющий все остальные модули
@@ -20,6 +21,7 @@ val appModule = module {
             reminderModule,
             prAnalyzerModule,
             productAssistantModule,
+            userProfileModule,
             sharedModule
         )
     )

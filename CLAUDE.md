@@ -246,7 +246,7 @@ Use `expect`/`actual` declarations for platform abstractions.
 
 The project uses composite build with `build-logic/` containing:
 - `jvm.library.gradle.kts` - JVM library conventions
-- `kmp.library.gradle.kts` - Kotlin Multiplatform library conventions
+- `shared.library.gradle.kts` - Kotlin Multiplatform library conventions
 - `lint.gradle.kts` - Detekt configuration
 - `tools.jdeps.gradle.kts` - Dependency analysis tools
 

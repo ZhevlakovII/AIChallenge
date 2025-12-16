@@ -1,0 +1,29 @@
+package ru.izhxx.aichallenge.core.logger
+
+import ru.izhxx.aichallenge.core.logger.LogLevel.ERROR
+import ru.izhxx.aichallenge.core.logger.LogLevel.NONE
+import ru.izhxx.aichallenge.core.logger.LogLevel.WARN
+
+/**
+ * Уровни логирования.
+ *
+ * Политика включения уровней:
+ * - Debug-сборки: все уровни кроме [NONE].
+ * - Release-сборки: только [WARN] и [ERROR].
+ */
+enum class LogLevel {
+    /** Детальная трассировка исполнения, самый «шумный» уровень. */
+    TRACE,
+
+    /** Отладочная информация для разработчика. */
+    DEBUG,
+
+    /** Предупреждение о потенциальной проблеме/деградации. */
+    WARN,
+
+    /** Ошибочное состояние/сбой операции. */
+    ERROR,
+
+    /** Полное отключение логирования. */
+    NONE
+}

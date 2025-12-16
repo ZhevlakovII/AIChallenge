@@ -35,6 +35,7 @@ import ru.izhxx.aichallenge.domain.service.NoopReminderNotifier
 import ru.izhxx.aichallenge.domain.service.ReminderEngine
 import ru.izhxx.aichallenge.domain.service.ReminderNotifier
 import ru.izhxx.aichallenge.domain.usecase.ExecuteReminderTaskUseCase
+import ru.izhxx.aichallenge.instruments.user.profile.repository.impl.dao.UserProfileDao
 
 val sharedModule = module {
     single<Json> {
@@ -73,7 +74,8 @@ val sharedModule = module {
             toolsMapper = get(),
             json = get(),
             mcpRouter = get(),
-            getMcpServers = get()
+            getMcpServers = get(),
+            userProfileRepository = get()
         )
     }
 
@@ -104,6 +106,11 @@ val sharedModule = module {
 
     single<AppDatabase> {
         DatabaseFactory.getDatabase()
+    }
+
+    // Provide UserProfileDao from AppDatabase
+    single<UserProfileDao> {
+        get<AppDatabase>().userProfileDao()
     }
 
     // DialogPersistenceRepository - репозиторий для работы с сохраненными диалогами

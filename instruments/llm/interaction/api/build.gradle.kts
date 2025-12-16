@@ -2,7 +2,7 @@ import ru.izhxx.aichallenge.logic.commonDependencies
 import ru.izhxx.aichallenge.logic.configurator.config
 
 plugins {
-    id("kmp.library")
+    id("shared.library")
 }
 
 android {
@@ -18,6 +18,6 @@ kotlin {
         implementation(projects.instruments.llm.config.provider.model)
 
         // Libraries
-        implementation(libs.kotlinx.coroutinesCore)
+        implementation(libs.kotlinx.coroutines.core)
     }
 }

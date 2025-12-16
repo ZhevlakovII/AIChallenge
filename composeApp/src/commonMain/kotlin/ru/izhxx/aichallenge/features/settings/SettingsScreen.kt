@@ -343,6 +343,98 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ============ ПЕРСОНАЛИЗАЦИЯ ============
+                Text(
+                    text = "Персонализация",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp, top = 8.dp)
+                )
+
+                Text(
+                    text = "Настройте информацию о себе для более персонализированного общения с LLM:",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Переключатель персонализации
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Включить персонализацию",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Switch(
+                        checked = state.personalizationEnabled,
+                        onCheckedChange = { viewModel.updatePersonalizationEnabled(it) },
+                        enabled = !state.isLoading
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Имя пользователя
+                Text(
+                    text = "Имя",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = state.userName,
+                    onValueChange = { viewModel.updateUserName(it) },
+                    label = { Text("Ваше имя") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading && state.personalizationEnabled,
+                    singleLine = true,
+                    placeholder = { Text("Например: Иван") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Профессия
+                Text(
+                    text = "Профессия / Роль",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = state.userProfession,
+                    onValueChange = { viewModel.updateUserProfession(it) },
+                    label = { Text("Ваша профессия") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading && state.personalizationEnabled,
+                    singleLine = true,
+                    placeholder = { Text("Например: разработчик") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Уровень опыта
+                Text(
+                    text = "Уровень опыта",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = state.userExperienceLevel,
+                    onValueChange = { viewModel.updateUserExperienceLevel(it) },
+                    label = { Text("Уровень опыта") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading && state.personalizationEnabled,
+                    singleLine = true,
+                    placeholder = { Text("Например: 5 лет / junior / senior") }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // ============ RAG НАСТРОЙКИ ============
                 Text(
                     text = "RAG (Retrieval-Augmented Generation)",

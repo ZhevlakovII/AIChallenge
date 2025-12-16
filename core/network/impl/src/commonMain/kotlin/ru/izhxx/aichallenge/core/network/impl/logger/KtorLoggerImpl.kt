@@ -1,8 +1,8 @@
 package ru.izhxx.aichallenge.core.network.impl.logger
 
 import io.ktor.client.plugins.logging.Logger
-import ru.izhxx.aichallenge.core.foundation.logger.Tag
-import ru.izhxx.aichallenge.core.foundation.logger.debug
+import ru.izhxx.aichallenge.core.logger.Tag
+import ru.izhxx.aichallenge.core.logger.debug
 
 internal class KtorLoggerImpl : Logger {
 
