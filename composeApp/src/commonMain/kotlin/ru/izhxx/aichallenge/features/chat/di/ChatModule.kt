@@ -27,7 +27,7 @@ val chatModule: Module = module {
     factoryOf(::CompareMessageUseCaseImpl) bind CompareMessageUseCase::class
 
     // ViewModel
-    viewModel { 
+    viewModel {
         ChatViewModel(
             sendMessageUseCase = get(),
             checkApiKeyConfigurationUseCase = get(),
@@ -41,7 +41,8 @@ val chatModule: Module = module {
             getGithubUserReposUseCase = get(),
             getMyGithubReposUseCase = get(),
             getMcpToolsUseCase = get(),
-            compareMessageUseCase = get()
+            compareMessageUseCase = get(),
+            recognizeSpeechUseCase = get()
         )
     }
 }

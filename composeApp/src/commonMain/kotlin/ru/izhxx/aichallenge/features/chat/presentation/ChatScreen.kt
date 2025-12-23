@@ -1,6 +1,7 @@
 package ru.izhxx.aichallenge.features.chat.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
@@ -50,7 +52,15 @@ fun ChatScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lazyListState = rememberLazyListState()
     var showErrorDialog by remember { mutableStateOf(false) }
-    
+
+    // Запрос разрешения на запись аудио для распознавания речи
+    RequestAudioPermission(
+        hasPermission = state.hasRecordPermission,
+        onPermissionResult = { isGranted ->
+            viewModel.processEvent(ChatEvent.UpdatePermissionStatus(isGranted))
+        }
+    )
+
     // Автоматическая прокрутка к последнему сообщению при добавлении нового
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -133,7 +143,12 @@ fun ChatScreen(
                 value = state.inputText,
                 onValueChange = { viewModel.processEvent(ChatEvent.UpdateInputText(it)) },
                 onSendClick = { viewModel.processEvent(ChatEvent.SendMessage(state.inputText)) },
+                onMicPress = { viewModel.processEvent(ChatEvent.StartVoiceRecording) },
+                onMicRelease = { viewModel.processEvent(ChatEvent.StopVoiceRecording) },
                 isLoading = state.isLoading,
+                isRecording = state.isRecording,
+                recognizedText = state.recognizedText,
+                hasPermission = state.hasRecordPermission,
                 modifier = Modifier.fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 16.dp)
@@ -150,28 +165,75 @@ private fun MessageInput(
     value: String,
     onValueChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onMicPress: () -> Unit,
+    onMicRelease: () -> Unit,
     isLoading: Boolean,
+    isRecording: Boolean,
+    recognizedText: String,
+    hasPermission: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("Введите вопрос...") },
-            enabled = !isLoading
-        )
-        
-        Spacer(Modifier.width(8.dp))
-        
-        Button(
-            onClick = onSendClick,
-            enabled = value.isNotBlank() && !isLoading
+    Column(modifier = modifier) {
+        // Показываем распознанный текст в реальном времени
+        if (recognizedText.isNotEmpty()) {
+            Text(
+                text = "Распознано: $recognizedText",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Отправить")
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Введите вопрос...") },
+                enabled = !isLoading && !isRecording
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            // Кнопка микрофона (push-to-talk) - показываем только если есть разрешение
+            if (hasPermission) {
+                Box(
+                    modifier = Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    onMicPress()
+                                    tryAwaitRelease()
+                                    onMicRelease()
+                                }
+                            )
+                        }
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isRecording) "🎤" else "🎙️",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = if (isRecording)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
+            }
+
+            Button(
+                onClick = onSendClick,
+                enabled = value.isNotBlank() && !isLoading && !isRecording
+            ) {
+                Text("Отправить")
+            }
         }
     }
 }

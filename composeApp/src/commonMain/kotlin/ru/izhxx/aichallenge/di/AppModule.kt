@@ -8,6 +8,7 @@ import ru.izhxx.aichallenge.features.productassistant.impl.di.productAssistantMo
 import ru.izhxx.aichallenge.features.reminder.di.reminderModule
 import ru.izhxx.aichallenge.features.settings.di.settingsModule
 import ru.izhxx.aichallenge.instruments.user.profile.repository.impl.di.userProfileModule
+import ru.izhxx.aichallenge.instruments.speech.recognition.impl.di.speechRecognitionModule
 
 /**
  * Основной модуль приложения, объединяющий все остальные модули
@@ -22,6 +23,7 @@ val appModule = module {
             prAnalyzerModule,
             productAssistantModule,
             userProfileModule,
+            speechRecognitionModule,
             sharedModule
         )
     )

@@ -41,6 +41,11 @@ kotlin {
             implementation(projects.features.pranalyzer.api)
             implementation(projects.features.pranalyzer.impl)
             implementation(projects.core.ui.navigation)
+            implementation(projects.instruments.speech.recognition.api)
+            implementation(projects.instruments.speech.recognition.impl)
+            implementation(projects.instruments.user.profile.model)
+            implementation(projects.instruments.user.profile.repository.api)
+            implementation(projects.instruments.user.profile.repository.impl)
 
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -59,10 +64,6 @@ kotlin {
             implementation(projects.shared.sharedold)
             implementation(projects.rag.docIndexer.core)
             implementation(projects.rag.docIndexer.ollama)
-
-            implementation(projects.instruments.user.profile.model)
-            implementation(projects.instruments.user.profile.repository.api)
-            implementation(projects.instruments.user.profile.repository.impl)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

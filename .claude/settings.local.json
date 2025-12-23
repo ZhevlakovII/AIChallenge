@@ -6,7 +6,8 @@
       "Bash(.\\gradlew.bat tasks:*)",
       "Bash(./gradlew tasks:*)",
       "Bash(mkdir:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(move:*)"
     ],
     "deny": [],
     "ask": []

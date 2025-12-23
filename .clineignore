@@ -10,11 +10,7 @@
 # - Use * for wildcards
 # - Use ! to negate patterns
 # =============================================================================
-memory-bank
-memory-bank/
 rag-embeddings-data
 rag-embeddings-data/
-unused
-unused/
 config/secrets/
 config/secrets
