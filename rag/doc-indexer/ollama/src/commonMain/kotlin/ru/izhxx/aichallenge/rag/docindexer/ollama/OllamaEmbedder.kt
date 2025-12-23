@@ -13,7 +13,7 @@ import ru.izhxx.aichallenge.rag.docindexer.core.api.Embedder
 
 /**
  * Общий (common) Embedder для Ollama. Требует, чтобы в переданном HttpClient был установлен
- * ContentNegotiation с kotlinx.serialization(JSON) и таймауты на уровне клиента.
+ * ContentNegotiation с kotlinx.serialization(JSON) и тайм-ауты на уровне клиента.
  *
  * Поддерживает два формата ответа:
  * 1) {"embedding": [Double]}

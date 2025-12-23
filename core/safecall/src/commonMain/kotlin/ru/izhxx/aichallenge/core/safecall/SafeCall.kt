@@ -74,12 +74,12 @@ suspend inline fun <T> suspendedSafeCall(
  *
  * Поведение:
  * - Успех — возвращает [AppResult.Success].
- * - Любое исключение — преобразуется через [throwableMapper] и возвращает [AppResult.Failure].
+ * - Любое исключение — преобразуется через [suspendThrowableMapper] и возвращает [AppResult.Failure].
  *
  * Важно: [CancellationException] не перехватывается и пробрасывается, сохраняя семантику отмены корутин.
  *
  * @param T Тип результата.
- * @param throwableMapper Suspend-вариант маппера Throwable → [AppError].
+ * @param suspendThrowableMapper Suspend-вариант маппера Throwable → [AppError].
  * @param block Suspend‑операция, потенциально выбрасывающая исключения.
  * @return [AppResult] с успехом или ошибкой.
  *
